@@ -8,6 +8,7 @@
 *.obj
 *.s
 *.bc
+*.bcl
 
 # Precompiled Headers
 *.gch
