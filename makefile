@@ -9,12 +9,15 @@ build : $(objects)
 	-lkleeModule -lkleeRuntest -lkleeSupport
 
 klee: dummymain.bcl
-	#klee  --libc=uclibc --posix-runtime dummymain.bcl
+	klee  --libc=uclibc --posix-runtime dummymain.bcl
 	#See https://klee.github.io/docs/options/ for ideas on linking in external files.
-	klee dummymain.bcl
+	#klee dummymain.bcl
 	
 dummymain.bcl: $(bitcode)
-	llvm-link-6.0 $(bitcode) -o dummymain.bcl
+	# The RDF-DUMP flag is undocumented, but it preserves all
+	# debug information in the linked bitcode.
+	# This is valuable for visualization of test coverage.
+	llvm-link-6.0 -rdf-dump $(bitcode) -o dummymain.bcl
 
 dummymain.bc: dummymain.c defs.h alufunc.h alufunc.bc
 	clang-6.0 -I /home/matthewmcraven/klee/klee/include/ -c -g -emit-llvm dummymain.c
