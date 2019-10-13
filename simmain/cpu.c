@@ -81,6 +81,7 @@ FLAG getFlag(struct CPU* cpu, enum StatusBits flag)
     case V:
     case C:
         return cpu->PSNVCbits[flag];
+        break;
     default:
         assert(0);
     }
@@ -155,7 +156,8 @@ void setFlag(struct CPU* cpu, enum StatusBits flag, FLAG value)
     case Z:
     case V:
     case C:
-        cpu->PSNVCbits[flag] = flag > 0 ? 1 : 0;
+        cpu->PSNVCbits[flag] = value ? 1 : 0;
+        break;
     default:
         assert(0);
     }
