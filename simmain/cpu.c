@@ -12,7 +12,7 @@ void zeroCPU(struct CPU* cpu)
     cpu->MDRE = 0;
     cpu->MDRO = 0;
     cpu->microPC = 0;
-    memset(cpu->memory, 0 ,sizeof(cpu->memory));
+    //memset(cpu->memory, 0 ,sizeof(cpu->memory));
     memset(cpu->regBank.registers, 0 ,sizeof(cpu->regBank.registers));
     memset(cpu->PSNVCbits, 0 ,sizeof(cpu->PSNVCbits));
 }

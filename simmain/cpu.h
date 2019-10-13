@@ -26,7 +26,7 @@ struct RegisterBank
 struct CPU
 {
     // Memory section
-    BYTE memory[0x10000];
+    //BYTE memory[0x10000];
 
     // Data section
     struct RegisterBank regBank;
