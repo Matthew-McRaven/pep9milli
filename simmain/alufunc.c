@@ -129,43 +129,39 @@ struct ALUByteResult byte_ident(BYTE a)
 
 
 
-
-
-
-#if false
 /*
  * Nonunary ALU operations performed on register words.
  */
-struct ALUWordResult add_nocarry(WORD a, WORD b)
+struct ALUWordResult word_add_nocarry(WORD a, WORD b)
 {
-    return add_carry(a, b, 0);
+    return word_add_carry(a, b, 0);
 }
-struct ALUWordResult sub_nocarry(WORD a, WORD b)
+
+struct ALUWordResult word_sub_nocarry(WORD a, WORD b)
 {
-    return sub_carry(a, b, 1);
+    return word_sub_carry(a, b, 1);
 }
-struct ALUWordResult add_carry(WORD a, WORD b, FLAG carryIn)
+
+struct ALUWordResult word_add_carry(WORD a, WORD b, FLAG carryIn)
 {
     struct ALUWordResult result;
-    result.result = ((DWORD)a + (DWORD)b + ((DWORD)carryIn >= 1 ? 1 : 0));
-    result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
-    result.NZVC[Z] = result.result == 0 ? 1 : 0;
-    // There is a signed overflow iff the high order bits of the input are the same,
-    // and the inputs & output differs in sign.
-    // Shifts in 0's (unsigned chars), so after shift, only high order bit remain.
-    result.NZVC[V] = ((~(a ^ b) & (a ^ result.result)) >> 7) ? 1 : 0;
-    // If the output shrunk in magnitude, then there was a carryout
-    result.NZVC[C] = result.result < a || result.result < b ? 1 : 0;
+    struct ALUByteResult low = byte_add_carry((BYTE)a, (BYTE)b, carryIn);
+    struct ALUByteResult hi  = byte_add_carry(a & 0xFF00 >> 8, b & 0xFF00 >> 8, low.NZVC[C]);
+    result.result = hi.result << 8 | low.result;
+    // All status bits are the same except for Z, which is composed of high and low.
+    memcpy(&result.NZVC, &hi.NZVC, sizeof(hi.NZVC));
+    result.NZVC[Z] = hi.NZVC[Z] & low.NZVC[N] ? 1 : 0;
     return result;
 }
-struct ALUWordResult sub_carry(WORD a, WORD b, FLAG carryIn)
+
+struct ALUWordResult word_sub_carry(WORD a, WORD b, FLAG carryIn)
 {
-    return add_carry(a, ~b, carryIn);
+    return word_add_carry(a, ~b, carryIn);
 }
 
 
 
-struct ALUWordResult and(WORD a, WORD b)
+struct ALUWordResult word_and(WORD a, WORD b)
 {
     struct ALUWordResult result;
     result.result = a & b;
@@ -174,39 +170,34 @@ struct ALUWordResult and(WORD a, WORD b)
     return result;
 }
 
-struct ALUWordResult nor(WORD a, WORD b)
+struct ALUWordResult word_nand(WORD a, WORD b)
 {
-    struct ALUWordResult andRes = and(a, b);
-    return not(andRes.result); 
+    return word_not(word_and(a, b).result);
 }
 
-struct ALUWordResult or(WORD a, WORD b)
+struct ALUWordResult word_or(WORD a, WORD b)
 {
-    struct ALUWordResult result;
-    result.result = a | b;
-    result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
-    result.NZVC[Z] = result.result == 0 ? 1 : 0;
-    return result;
+    // Use identity a + b == (a + b)'' == (a'b')'
+    return word_not(word_and(~a, ~b).result);
 }
 
-struct ALUWordResult nor(WORD a, WORD b)
+struct ALUWordResult word_nor(WORD a, WORD b)
 {
-    struct ALUWordResult orRes = or(a, b);
-    return not(orRes.result); 
+    // Use identity (a + b)' == (a'b')
+    return word_and(~a, ~b);
 }
 
-struct ALUWordResult xor(WORD a, WORD b)
+struct ALUWordResult word_xor(WORD a, WORD b)
 {
-    struct ALUWordResult result;
-    result.result = a ^ b;
-    result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
-    result.NZVC[Z] = result.result == 0 ? 1 : 0;
-    return result;
+    // Use a XOR b == (ab')+(a'b)
+    return word_or(word_and(a, ~b).result,
+                   word_and(~a, b).result);
 }
+
 /*
  * Nonunary ALU operations performed on register words.
  */
-struct ALUWordResult not(WORD a)
+struct ALUWordResult word_not(WORD a)
 {
     struct ALUWordResult result;
     result.result = ~a;
@@ -215,44 +206,45 @@ struct ALUWordResult not(WORD a)
     return result;
 }
 
-struct ALUWordResult asl(WORD a, FLAG* tempFlags)
+struct ALUWordResult word_asl(WORD a)
+{
+    // The implementations of asl and rol(x, 0) were proven equivilant by a theorem prover.
+    return word_rol(a,0);
+}
+struct ALUWordResult word_asr(WORD a)
+{
+    FLAG carryIn = a & 0x8000 ? 1 : 0;
+    return word_ror(a, carryIn);
+}
+
+struct ALUWordResult word_rol(WORD a, FLAG carryIn)
 {
     struct ALUWordResult result;
-    result.result = (WORD)(a << 1);
+    result.result = a << 1 | (carryIn ? 1 : 0);
     result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
-    result.NZVC[Z] = result.result == 0 ? 1 : 0;
+    result.NZVC[Z] = result.result == 0 ? 1 : 0; 
      // Signed overflow if a<hi> doesn't match a<hi-1>
-    result.NZVC[V] = (((a << 1) ^ a) >> 15 ) ? 1 : 0;
-    //WORD result = (WORD)(a << 1);
-    //tempFlags[N] = result & 0x8000 ? 1 : 0;
-    //tempFlags[Z] = result == 0 ? 1 : 0;
-    //return result;
-}
-struct ALUWordResult asr(WORD a, FLAG* tempFlags)
-{
-    // Respect sign bit of A.
-    WORD hiBit = a & 0x8000 ? 1 : 0;
-    return hiBit | (WORD)(a >> 1);
+    result.NZVC[V] =  (((a << 1) ^ a) >> 15) ? 1 : 0;
+     // Carry out equals the hi order bit
+    result.NZVC[C] = ((a & 0x8000) >> 15) ? 1 : 0;
+    return result;
 }
 
-struct ALUWordResult rol(WORD a, FLAG* carry, FLAG* tempFlags)
+struct ALUWordResult word_ror(WORD a, FLAG carryIn)
 {
-    DWORD res = (a << 1) | ((*carry) ? 1 : 0);
-    *carry  = res & 0x10000 ? 1 : 0;
-    return (WORD) res;
+    struct ALUWordResult result;
+    result.result = a >> 1 | (carryIn ? 0x8000 : 0);
+    result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
+    result.NZVC[Z] = result.result == 0 ? 1 : 0; 
+     // Carry out equals the hi order bit
+    result.NZVC[C] = (a & 0x01) ? 1 : 0;
+    return result;
 }
 
-struct ALUWordResult ror(WORD a, FLAG* carry, FLAG* tempFlags)
+struct ALUWordResult word_ident(WORD a)
 {
-    FLAG cOut = a & 0x1 ? 1 : 0;
-    DWORD res = (a >> 1) | ((*carry) ? 0x8000 : 0);
-    *carry  = cOut;
-    return res;
+    struct ALUWordResult result;
+    result.NZVC[N] = result.result & 0x8000 ? 1 : 0;
+    result.NZVC[Z] = result.result == 0 ? 1 : 0; 
+    return result;
 }
-
-struct ALUWordResult ident(WORD a, FLAG* tempFlags)
-{
-    return a;
-}
-
-#endif

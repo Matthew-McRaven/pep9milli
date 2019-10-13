@@ -35,7 +35,7 @@ struct ALUByteResult byte_ror(BYTE a, FLAG carryIn);
 struct ALUByteResult byte_ident(BYTE a);
 struct ALUByteResult byte_flags(BYTE a);
 
-#if false
+
 struct ALUWordResult
 {
     WORD result;
@@ -44,25 +44,25 @@ struct ALUWordResult
 /*
  * Nonunary ALU operations performed on register words.
  */
-struct ALUWordResult add_nocarry(WORD a, WORD b);
-struct ALUWordResult sub_nocarry(WORD a, WORD b);
-struct ALUWordResult add_carry(WORD a, WORD b, FLAG carryIn);
-struct ALUWordResult sub_carry(WORD a, WORD b, FLAG carryIn);
+struct ALUWordResult word_add_nocarry(WORD a, WORD b);
+struct ALUWordResult word_sub_nocarry(WORD a, WORD b);
+struct ALUWordResult word_add_carry(WORD a, WORD b, FLAG carryIn);
+struct ALUWordResult word_sub_carry(WORD a, WORD b, FLAG carryIn);
 
-struct ALUWordResult and(WORD a, WORD b);
-struct ALUWordResult nand(WORD a, WORD b);
-struct ALUWordResult or(WORD a, WORD b);
-struct ALUWordResult nor(WORD a, WORD b);
-struct ALUWordResult xor(WORD a, WORD b);
+struct ALUWordResult word_and(WORD a, WORD b);
+struct ALUWordResult word_nand(WORD a, WORD b);
+struct ALUWordResult word_or(WORD a, WORD b);
+struct ALUWordResult word_nor(WORD a, WORD b);
+struct ALUWordResult word_xor(WORD a, WORD b);
 
 /*
  * Unary ALU operations performed on register words.
  */
-struct ALUWordResult not(WORD a);
-struct ALUWordResult asl(WORD a);
-struct ALUWordResult asr(WORD a);
-struct ALUWordResult rol(WORD a, FLAG carryIn);
-struct ALUWordResult ror(WORD a, FLAG carryIn);
-struct ALUWordResult ident(WORD a);
-#endif
+struct ALUWordResult word_not(WORD a);
+struct ALUWordResult word_asl(WORD a);
+struct ALUWordResult word_asr(WORD a);
+struct ALUWordResult word_rol(WORD a, FLAG carryIn);
+struct ALUWordResult word_ror(WORD a, FLAG carryIn);
+struct ALUWordResult word_ident(WORD a);
+
 #endif
