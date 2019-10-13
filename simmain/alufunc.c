@@ -16,8 +16,8 @@ WORD sub_nocarry(WORD a, WORD b, FLAG* tempFlags)
 WORD add_carry(WORD a, WORD b, FLAG carry, FLAG* tempFlags)
 {
     WORD result = ((DWORD)a + (DWORD)b + ((DWORD)carry >= 1 ? 1 : 0));
-    //tempFlags[N] = result & 0x8000 ? 1 : 0;
-    //tempFlags[Z] = result == 0 ? 1 : 0;
+    tempFlags[N] = result & 0x8000 ? 1 : 0;
+    tempFlags[Z] = result == 0 ? 1 : 0;
     return result;
 }
 WORD sub_carry(WORD a, WORD b, FLAG carry, FLAG* tempFlags)

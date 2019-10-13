@@ -16,29 +16,28 @@ WORD asr1(WORD a, FLAG* bits) {
 int main(int argv, char** argc)
 {
     // Declare symbolic registers
-    struct RegisterBank reg;
-    klee_make_symbolic(&reg, sizeof(reg), "rBank");
-
+    struct CPU cpu;
+    klee_make_symbolic(&cpu, sizeof(cpu), "CPU");
+    cpu.PSNVCbits[Z] = 0;
     
     // Force B to always be positive.
     WORD (*func_arr[2])(WORD, FLAG*);
     func_arr[0] = &asr1;
     func_arr[1] = &shiftin1;
     int which = 0;
-    FLAG bits[6];
-    while(getNamedRegisterWord(&reg, A) != 0b11) {
-        WORD regA = getNamedRegisterWord(&reg, A);
+    while(getNamedRegisterWord(&cpu.regBank, A) != 0b11) {
+        WORD regA = getNamedRegisterWord(&cpu.regBank, A);
         if((regA == 0) | (regA == 1)) {
             which = 1;
         }
         else {
             which = 0;
         }
-        setNamedRegisterWord(&reg, A, (*func_arr[which])(regA, bits));
+        setNamedRegisterWord(&cpu.regBank, A, (*func_arr[which])(regA, cpu.PSNVCbits));
         //printf("A is %i",regA);
     }
 
-    klee_assert(bits[Z] == 0);
+    klee_assert(cpu.PSNVCbits[Z] == 0);
     //printf("Hello world!\n");
     return 0;
 }

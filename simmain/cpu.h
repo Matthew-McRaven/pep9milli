@@ -11,12 +11,13 @@ enum Registers
 enum StatusBits 
 {
     // Control section status bits
-    P = 1<<5, 
+    P = 5, 
     // Status bits at the MC level
-    S = 1<<4, 
+    S = 4, 
     // Status bits at the assembly level
-    N = 1<<3, Z = 1<<2, V = 1<<1, C = 1<<0
+    N = 3, Z = 2, V = 1, C = 0
 };
+
 struct RegisterBank
 {
     BYTE registers[32];
@@ -36,6 +37,9 @@ struct CPU
     // Control section
     WORD microPC;
 };
+
+// Initialize all values in a CPU to zero
+void zeroCPU(struct CPU* cpu);
 
 /*
  * Functions to read state of CPU.

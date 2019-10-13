@@ -1,7 +1,21 @@
 #include "cpu.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
+// Initialize all values in a CPU to zero
+void zeroCPU(struct CPU* cpu)
+{
+    cpu->MARA = 0;
+    cpu->MARB = 0;
+    cpu->MDRE = 0;
+    cpu->MDRO = 0;
+    cpu->microPC = 0;
+    memset(cpu->memory, 0 ,sizeof(cpu->memory));
+    memset(cpu->regBank.registers, 0 ,sizeof(cpu->regBank.registers));
+    memset(cpu->PSNVCbits, 0 ,sizeof(cpu->PSNVCbits));
+}
 /*
  * Functions to read state of CPU.
  */
