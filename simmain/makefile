@@ -1,7 +1,7 @@
-sources = dummymain.c alufunc.c cpu.c
-bitcode = dummymain.bc alufunc.bc cpu.bc
-asmcode = dummymain.s alufunc.s cpu.s
-objects = dummymain.o alufunc.o cpu.o
+sources = dummymain.c alufunc.c cpu.c nopsim.c
+bitcode = dummymain.bc alufunc.bc cpu.bc sim.bc
+asmcode = dummymain.s alufunc.s cpu.s sim.s
+objects = dummymain.o alufunc.o cpu.o sim.o
 
 build : $(objects)
 	gcc -L/home/matthewmcraven/klee/klee/build/lib \
@@ -50,6 +50,14 @@ cpu.s: cpu.bc
 cpu.o: cpu.s
 	as -o cpu.o cpu.s 
 	
+sim.bc: nopsim.c sim.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm nopsim.c -o sim.bc
+
+sim.s: sim.bc
+	llc-6.0 -relocation-model=pic sim.bc  -o sim.s
+
+sim.o: sim.s
+	as -o sim.o sim.s 
 
 clean:
 	rm $(bitcode) $(asmcode) $(objects) dummymain.out dummymain.bcl 

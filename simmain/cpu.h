@@ -35,9 +35,10 @@ struct CPU
     BYTE MDRE, MDRO;
 
     // Control section
-    WORD microPC;
+    MCAddress microPC;
 };
 
+typedef FLAG(*MicrocodeLine)(struct CPU*);
 // Initialize all values in a CPU to zero
 void zeroCPU(struct CPU* cpu);
 

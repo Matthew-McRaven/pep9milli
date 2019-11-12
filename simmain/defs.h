@@ -11,4 +11,6 @@ typedef uint16_t WORD;
 typedef uint8_t BYTE;
 typedef uint8_t FLAG;
 
+typedef uint16_t MCAddress;
+
 #endif
