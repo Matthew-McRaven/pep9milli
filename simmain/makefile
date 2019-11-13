@@ -51,7 +51,7 @@ cpu.o: cpu.s
 	as -o cpu.o cpu.s 
 	
 sim.bc: nopsim.c sim.h
-	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm nopsim.c -o sim.bc
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm samplesim.c -o sim.bc
 
 sim.s: sim.bc
 	llc-6.0 -relocation-model=pic sim.bc  -o sim.s

@@ -11,9 +11,15 @@ FLAG executeSim(struct CPU *cpu)
 {
     FLAG finished = 0;
     initCPU(cpu);
+    cpu->microPC = 0;
     while(!finished) {
-        printf("%d",cpu->microPC);
-        finished = microcodeTable[cpu->microPC](cpu);
+        if(cpu->microPC > 3) {
+            finished = 1;
+        }
+        else {
+            finished = microcodeTable[cpu->microPC](cpu);
+        }
+
     }
     return testCPU(cpu);
 }
@@ -24,6 +30,7 @@ int main(int argv, char** argc)
     struct CPU cpu;
     klee_make_symbolic(&cpu, sizeof(cpu), "CPU");
     zeroCPU(&cpu);
+    initMCArray();
     executeSim(&cpu);
     return 0;
 }

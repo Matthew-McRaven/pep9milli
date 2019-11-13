@@ -2,6 +2,15 @@
 #include "alufunc.h"
 #include "cpu.h"
 
+void initMCArray()
+{
+    klee_make_symbolic(&size, sizeof(size), "size");
+    size = 4;
+    microcodeTable = malloc(size*sizeof(MicrocodeLine));
+    microcodeTable[0] = nop0;
+    microcodeTable[1] = nop1;
+    microcodeTable[2] = stop;
+}
 void initCPU(struct CPU *cpu)
 {
     zeroCPU(cpu);
