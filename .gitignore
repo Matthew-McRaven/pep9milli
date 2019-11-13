@@ -37,3 +37,5 @@
 build/
 *.code-workspace
 klee-*
+.vscode/
+*.DS_Store
