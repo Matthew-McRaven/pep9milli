@@ -3,9 +3,6 @@
 #include "cpu.h"
 #include <stdlib.h>
 #include "klee/klee.h"
-FLAG suba1 (struct CPU* cpu);
-FLAG asla1 (struct CPU* cpu);
-FLAG stop (struct CPU* cpu);
 
 
 void initMCArray()

@@ -13,13 +13,7 @@ FLAG executeSim(struct CPU *cpu)
     initCPU(cpu);
     cpu->microPC = 0;
     while(!finished) {
-        if(cpu->microPC > 3) {
-            finished = 1;
-        }
-        else {
-            finished = microcodeTable[cpu->microPC](cpu);
-        }
-
+        finished = microcodeTable[cpu->microPC](cpu);
     }
     return testCPU(cpu);
 }
@@ -29,7 +23,7 @@ int main(int argv, char** argc)
     // Declare symbolic registers
     struct CPU cpu;
     klee_make_symbolic(&cpu, sizeof(cpu), "CPU");
-    zeroCPU(&cpu);
+    //zeroCPU(&cpu);
     initMCArray();
     executeSim(&cpu);
     return 0;
