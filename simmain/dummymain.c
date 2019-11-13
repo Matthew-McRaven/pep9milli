@@ -5,6 +5,8 @@
 #include "cpu.h"
 #include "defs.h"
 #include "klee/klee.h"
+//#include "simbytetest.h"
+//#include "simcfibbyte.h"
 #include "sim.h"
 
 FLAG executeSim(struct CPU *cpu)

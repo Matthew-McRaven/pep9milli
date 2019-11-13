@@ -10,7 +10,7 @@ build : $(objects)
 	-lkleeModule -lkleeRuntest -lkleeSupport
 
 klee: dummymain.bcl
-	klee  --libc=uclibc --posix-runtime dummymain.bcl
+	klee  --libc=uclibc --posix-runtime -external-calls=all dummymain.bcl
 	#See https://klee.github.io/docs/options/ for ideas on linking in external files.
 	#klee dummymain.bcl
 	
@@ -49,9 +49,18 @@ cpu.s: cpu.bc
 
 cpu.o: cpu.s
 	as -o cpu.o cpu.s 
-	
-sim.bc: nopsim.c sim.h
-	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simbytetest.c -o sim.bc
+
+# NOP simulation
+#sim.bc: nopsim.c sim.h
+	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm nopsim.c -o sim.bc
+
+# Simple arithmetic rountine test
+#sim.bc: simbytetest.c simbytetest.h
+	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simbytetest.c -o sim.bc
+
+# Simple arithmetic rountine test
+sim.bc: simcfibbyte.c simcfibbyte.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibbyte.c -o sim.bc
 
 sim.s: sim.bc
 	llc-6.0 -relocation-model=pic sim.bc  -o sim.s

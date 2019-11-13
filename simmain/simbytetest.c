@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "simbytetest.h"
 #include "alufunc.h"
 #include "cpu.h"
 #include <stdlib.h>
@@ -60,7 +60,7 @@ FLAG suba1 (struct CPU* cpu)
 {
     BYTE* target = &(cpu->regBank.registers[0]);
     //klee_assert(cpu->regBank.registers[0] <= 127);
-    *target =  byte_asr(*target).result;
+    *target =  byte_sub_nocarry(*target,1).result;
     if(*target == 0) {
         //klee_assert(cpu->regBank.registers[0] == 0);
         cpu->microPC = 3;
