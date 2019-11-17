@@ -9,6 +9,7 @@ FLAG clearX(struct CPU* cpu);
 // Algorithm uses SP as address base register
 FLAG clearSP(struct CPU* cpu);
 FLAG stop(struct CPU* cpu);
+// Calculate the first fibonnaci number, and place it in the first address.
 FLAG calc0(struct CPU* cpu);
 FLAG calc1(struct CPU* cpu);
 FLAG calcN(struct CPU* cpu);

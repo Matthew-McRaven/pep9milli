@@ -25,8 +25,6 @@ struct RegisterBank
 
 struct CPU
 {
-    // Memory section
-    BYTE memory[0x10000];
 
     // Data section
     struct RegisterBank regBank;
@@ -36,6 +34,9 @@ struct CPU
 
     // Control section
     MCAddress microPC;
+
+    // Memory section
+    BYTE memory[0x10000];
 };
 
 typedef FLAG(*MicrocodeLine)(struct CPU*);
