@@ -34,7 +34,7 @@ FLAG testCPU(struct CPU *cpu)
         /*printf("It: %d. EX %d. ADDR %d. ACT %d\n", it, last1+last2,
             baseAddress + it % 0x10000,
             cpu->memory[baseAddress + it % 0x10000]);*/
-        klee_assert(cpu->memory[baseAddress + it % 0x10000] == last1 + last2);
+        klee_assert(memory[(baseAddress + it) % 0x10000] == last1 + last2);
         int temp = last1 + last2;
         last2 = last1;
         last1 = temp;
@@ -71,12 +71,14 @@ FLAG clearSP(struct CPU* cpu)
     // I manually guide it to "interesting" memory locations.
     BYTE x;
     klee_make_symbolic(&x, sizeof(x), "choice");
-    klee_assume(x<=3);
+    klee_assume(x<=5);
     if(x == 0) {cpu->regBank.registers[6] = 0x00 ; cpu->regBank.registers[7] = 0x00;}
     else if (x == 1) {cpu->regBank.registers[6] = 0x00; cpu->regBank.registers[7] = 0xfc;}
     else if (x == 2) {cpu->regBank.registers[6] = 0xdd; cpu->regBank.registers[7] = 0xe1;}
     else if (x == 3) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xde;}
-    //else {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xfc;}
+    else if (x == 4) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xf4;}
+    else {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xfe;}
+    //cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xf2;
 
     WORD baseAddress = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
     //f("BADDR %d\n", baseAddress);
@@ -96,7 +98,7 @@ FLAG calc0(struct CPU* cpu)
     cpu->MARA = cpu->regBank.registers[4];
     cpu->MARB = cpu->regBank.registers[5];
     WORD address = getMARWord(cpu);
-    cpu->memory[address] = cpu->regBank.registers[1];
+    memory[address] = cpu->regBank.registers[1];
     //printf("M[%d]=%d\n",address, cpu->regBank.registers[1]);
 
     // Increment base address.
@@ -119,7 +121,7 @@ FLAG calc1(struct CPU* cpu)
     cpu->MARA = cpu->regBank.registers[4];
     cpu->MARB = cpu->regBank.registers[5];
     WORD address = getMARWord(cpu);
-    cpu->memory[address] = cpu->regBank.registers[1];
+    memory[address] = cpu->regBank.registers[1];
     //printf("M[%d]=%d\n",address, cpu->regBank.registers[1]);
 
     // Increment base address.
@@ -147,13 +149,13 @@ FLAG calcN(struct CPU* cpu)
 
     // Add Fib[n-2] to Fib[n-1] (which is in RB1).
     //printf("Fib[n-2] = %d\n", cpu->memory[nMinus2Address]);
-    cpu->regBank.registers[1] = byte_add_nocarry(cpu->regBank.registers[1], cpu->memory[nMinus2Address]).result;
+    cpu->regBank.registers[1] = byte_add_nocarry(cpu->regBank.registers[1], memory[nMinus2Address]).result;
 
     // Store result in Mem[SP]
     cpu->MARA = cpu->regBank.registers[4];
     cpu->MARB = cpu->regBank.registers[5];
     WORD nAddress = getMARWord(cpu);
-    cpu->memory[nAddress] = cpu->regBank.registers[1];
+    memory[nAddress] = cpu->regBank.registers[1];
     //printf("M[%d]=%d\n",nAddress, cpu->regBank.registers[1]);
 
     // Increment base address.
@@ -172,7 +174,8 @@ FLAG compN(struct CPU* cpu)
      WORD baseAddress = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
      WORD offset      = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
      struct ALUWordResult res = word_sub_nocarry(offset, 13 + baseAddress);
-     if(offset - baseAddress < 14) {
+     // Will overflow from uint16_t to int_32t, making my day suck.
+     if((WORD)(offset - baseAddress)  <= 13 ) {
         cpu->microPC = 5;
      }
      else {

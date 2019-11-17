@@ -35,9 +35,9 @@ struct CPU
     // Control section
     MCAddress microPC;
 
-    // Memory section
-    BYTE memory[0x10000];
 };
+// Memory section
+BYTE memory[0x10000];
 
 typedef FLAG(*MicrocodeLine)(struct CPU*);
 // Initialize all values in a CPU to zero

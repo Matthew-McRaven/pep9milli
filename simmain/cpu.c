@@ -19,7 +19,7 @@ void zeroCPU(struct CPU* cpu)
 
 void zeroMemory(struct CPU* cpu)
 {
-    memset(cpu->memory, 0 ,sizeof(cpu->memory));
+    memset(memory, 0 , sizeof(memory));
 }
 
 /*
