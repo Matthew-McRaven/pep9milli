@@ -26,7 +26,7 @@ struct RegisterBank
 struct CPU
 {
     // Memory section
-    //BYTE memory[0x10000];
+    BYTE memory[0x10000];
 
     // Data section
     struct RegisterBank regBank;
@@ -41,6 +41,7 @@ struct CPU
 typedef FLAG(*MicrocodeLine)(struct CPU*);
 // Initialize all values in a CPU to zero
 void zeroCPU(struct CPU* cpu);
+void zeroMemory(struct CPU* cpu);
 
 /*
  * Functions to read state of CPU.

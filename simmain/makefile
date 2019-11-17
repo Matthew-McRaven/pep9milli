@@ -58,9 +58,13 @@ cpu.o: cpu.s
 #sim.bc: simbytetest.c simbytetest.h
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simbytetest.c -o sim.bc
 
-# Simple arithmetic rountine test
-sim.bc: simcfibbyte.c simcfibbyte.h
-	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibbyte.c -o sim.bc
+# Successive fibonnaci numbers in registers.
+#sim.bc: simcfibregbyte.c simcfibregbyte.h
+	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibregbyte.c -o sim.bc
+
+# Successive fibonnaci numbers in memory.
+sim.bc: simcfibmembyte.c simcfibmembyte.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
 
 sim.s: sim.bc
 	llc-6.0 -relocation-model=pic sim.bc  -o sim.s

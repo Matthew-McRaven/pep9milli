@@ -1,4 +1,4 @@
-#include "simbytetest.h"
+#include "simcfibregbyte.h"
 #include "alufunc.h"
 #include "cpu.h"
 #include <stdlib.h>
@@ -167,9 +167,9 @@ FLAG c00(struct CPU* cpu)
     struct ALUByteResult res = byte_sub_nocarry(cpu->regBank.registers[at], cpu->regBank.registers[0]);
     cpu->regBank.registers[2] = 0;
     if(cpu->regBank.registers[at] >= cpu->regBank.registers[0]) {
-        printf("Current %d\n", cpu->regBank.registers[at]);
-        printf("Target %d\n", cpu->regBank.registers[0]);
-        printf("Difference %d\n", byte_sub_nocarry(cpu->regBank.registers[at], cpu->regBank.registers[0]).result);
+        //printf("Current %d\n", cpu->regBank.registers[at]);
+        //printf("Target %d\n", cpu->regBank.registers[0]);
+        //printf("Difference %d\n", byte_sub_nocarry(cpu->regBank.registers[at], cpu->regBank.registers[0]).result);
         klee_assert(cpu->regBank.registers[0] == 0);
         cpu->microPC = 15;
     } else {
