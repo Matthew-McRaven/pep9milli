@@ -1,7 +1,7 @@
-sources = dummymain.c alufunc.c cpu.c nopsim.c
-bitcode = dummymain.bc alufunc.bc cpu.bc sim.bc
-asmcode = dummymain.s alufunc.s cpu.s sim.s
-objects = dummymain.o alufunc.o cpu.o sim.o
+sources = dummymain.c alufunc.c cpu.c nopsim.c 
+bitcode = dummymain.bc alufunc.bc cpu.bc cpufunc.bc sim.bc
+asmcode = dummymain.s alufunc.s cpu.s cpufunc.s sim.s
+objects = dummymain.o alufunc.o cpu.o cpufunc.o sim.o
 
 build : $(objects)
 	gcc -L/home/matthewmcraven/klee/klee/build/lib \
@@ -49,6 +49,15 @@ cpu.s: cpu.bc
 
 cpu.o: cpu.s
 	as -o cpu.o cpu.s 
+
+cpufunc.bc: cpufunc.c cpufunc.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm cpufunc.c
+
+cpufunc.s: cpufunc.bc
+	llc-6.0 -relocation-model=pic cpufunc.bc  -o cpufunc.s
+
+cpufunc.o: cpufunc.s
+	as -o cpufunc.o cpufunc.s 
 
 # NOP simulation
 #sim.bc: nopsim.c sim.h

@@ -126,12 +126,22 @@ struct ALUByteResult byte_ident(BYTE a)
     result.NZVC[Z] = result.result == 0 ? 1 : 0; 
     return result;
 }
+struct ALUByteResult byte_flags(BYTE a)
+{
+    struct ALUByteResult result;
+    result.NZVC[N] = a & (1<<3) ? 1 : 0;
+    result.NZVC[Z] = a & (1<<2) ? 1 : 0;
+    result.NZVC[V] = a & (1<<1) ? 1 : 0;
+    result.NZVC[C] = a & (1<<0) ? 1 : 0;
+    return result;
+}
 
 
 
 /*
  * Nonunary ALU operations performed on register words.
  */
+
 struct ALUWordResult word_add_nocarry(WORD a, WORD b)
 {
     return word_add_carry(a, b, 0);

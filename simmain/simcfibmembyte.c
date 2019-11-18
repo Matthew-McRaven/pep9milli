@@ -1,6 +1,7 @@
 #include "simcfibmembyte.h"
 #include "alufunc.h"
 #include "cpu.h"
+#include "cpufunc.h"
 #include <stdlib.h>
 #include "klee/klee.h"
 
@@ -19,6 +20,7 @@ void initCPU(struct CPU *cpu)
 {
     //zeroCPU(cpu);
     cpu->microPC = 0;
+    init_static_regs(cpu);
 }
 
 FLAG testCPU(struct CPU *cpu)
@@ -44,24 +46,22 @@ FLAG testCPU(struct CPU *cpu)
 
 FLAG stop(struct CPU* cpu)
 {
-    return 1;
+    return update_UPC(cpu, Stop, 0, 0);
 }
 // Algorithm uses A as scratch computation register
 FLAG clearA(struct CPU* cpu)
 {
     // Do not 0 out RB0, since this contains the "target" number.
     //cpu->regBank.registers[0] = 0;
-    cpu->regBank.registers[1] = 0;
-    cpu->microPC = 1;
-    return 0;
+    cpu_byte_ident(cpu, 22, 1, 0, 0, 0);
+    return update_UPC(cpu, AUTO_INCR, 0, 0);
 }
 // Algorithm uses X as scratch address register
 FLAG clearX(struct CPU* cpu)
 {
-    cpu->regBank.registers[2] = 0;
-    cpu->regBank.registers[3] = 0;
-    cpu->microPC = 2;
-    return 0;
+    cpu_byte_ident(cpu, 22, 2, 0, 0, 0);
+    cpu_byte_ident(cpu, 22, 3, 0, 0, 0);
+    return update_UPC(cpu, AUTO_INCR, 0, 0);
 }
 // Algorithm uses SP as address base register
 FLAG clearSP(struct CPU* cpu)
@@ -78,59 +78,49 @@ FLAG clearSP(struct CPU* cpu)
     else if (x == 3) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xde;}
     else if (x == 4) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xf4;}
     else {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xfe;}
-    //cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xf2;
 
     WORD baseAddress = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
-    //f("BADDR %d\n", baseAddress);
-    // Use register 6,7 as symbolic "base" registers.
-    cpu->regBank.registers[4] = cpu->regBank.registers[6];
-    cpu->regBank.registers[5] = cpu->regBank.registers[7];
-    cpu->microPC = 3;
-    return 0;
+
+    // Copy the base address from RW6 to RW4.
+    cpu_byte_ident(cpu, 6, 4, 0, 0, 0);
+    cpu_byte_ident(cpu, 7, 5, 0, 0, 0);
+    return update_UPC(cpu, AUTO_INCR, 0, 0);
 }
 
 FLAG calc0(struct CPU* cpu)
 {
-    // Set accumulator to 0
-    cpu->regBank.registers[1] = 0;
+    // Set accumulator<lo> to 0
+    cpu_byte_ident(cpu, 22, 1, 0, 0, 0);
 
-    // Set memory address, perform memory write bypassing MDR registers.
-    cpu->MARA = cpu->regBank.registers[4];
-    cpu->MARB = cpu->regBank.registers[5];
-    WORD address = getMARWord(cpu);
-    memory[address] = cpu->regBank.registers[1];
-    //printf("M[%d]=%d\n",address, cpu->regBank.registers[1]);
+    // Move RW4 to MAR
+    move_to_mar(cpu, 4, 5);
+    cpu_byte_ident(cpu, 1, MDRE, 0, 0, 0);
+    mem_dbg_write_mdre(cpu);
 
     // Increment base address.
-    struct ALUByteResult loRes = byte_add_nocarry(cpu->regBank.registers[5], 1);
-    cpu->regBank.registers[5] = loRes.result;
-    cpu->regBank.registers[4] = byte_add_carry(cpu->regBank.registers[4], 0, loRes.NZVC[C]).result;
+    cpu_byte_add_nocarry(cpu, 5, 23, 5, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 4, 22, 4, S, 0, 0, 0, 0, 0, 0);
 
     // Update microprogram counter 
-    cpu->microPC = 4;
+    return update_UPC(cpu, AUTO_INCR, 0, 0);
 
-    // Termination does not halt here.
-    return 0;
 }
 FLAG calc1(struct CPU* cpu)
 {
     // Set accumulator to 1.
-    cpu->regBank.registers[1] = 1;
+    cpu_byte_ident(cpu, 23, 1, 0, 0, 0);
 
     // Set memory address, perform memory write bypassing MDR registers.
-    cpu->MARA = cpu->regBank.registers[4];
-    cpu->MARB = cpu->regBank.registers[5];
-    WORD address = getMARWord(cpu);
-    memory[address] = cpu->regBank.registers[1];
-    //printf("M[%d]=%d\n",address, cpu->regBank.registers[1]);
+    move_to_mar(cpu, 4, 5);
+    cpu_byte_ident(cpu, 1, MDRE, 0, 0, 0);
+    mem_dbg_write_mdre(cpu);
 
     // Increment base address.
-    struct ALUByteResult loRes = byte_add_nocarry(cpu->regBank.registers[5], 1);
-    cpu->regBank.registers[5] = loRes.result;
-    cpu->regBank.registers[4] = byte_add_carry(cpu->regBank.registers[4], 0, loRes.NZVC[C]).result;
+    cpu_byte_add_nocarry(cpu, 5, 23, 5, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 4, 22, 4, S, 0, 0, 0, 0, 0, 0);
 
     // Update microprogram counter 
-    cpu->microPC = 5;
+    update_UPC(cpu, AUTO_INCR, 0, 0);
 
     // Termination does not halt here.
     return 0;
@@ -138,33 +128,25 @@ FLAG calc1(struct CPU* cpu)
 FLAG calcN(struct CPU* cpu)
 {
     // Compute address of Fib[n-2]
-    struct ALUByteResult loRes = byte_sub_nocarry(cpu->regBank.registers[5],2);
-    cpu->regBank.registers[3] = loRes.result;
-    cpu->regBank.registers[2] = byte_sub_carry(cpu->regBank.registers[4],0, loRes.NZVC[C]).result;
+    cpu_byte_sub_nocarry(cpu, 5, 24, 3, 0, 0, 0, 0, 0, 1);
+    cpu_byte_sub_carry(cpu, 4, 22, 2, S, 0, 0, 0, 0, 0, 0);
 
     // Fetch Fib[n-2]
-    cpu->MARA = cpu->regBank.registers[2];
-    cpu->MARB = cpu->regBank.registers[3];
-    WORD nMinus2Address = getMARWord(cpu);
-
-    // Add Fib[n-2] to Fib[n-1] (which is in RB1).
-    //printf("Fib[n-2] = %d\n", cpu->memory[nMinus2Address]);
-    cpu->regBank.registers[1] = byte_add_nocarry(cpu->regBank.registers[1], memory[nMinus2Address]).result;
+    move_to_mar(cpu, 2, 3);
+    mem_dbg_read_into_mdre(cpu);
+    cpu_byte_add_nocarry(cpu, MDRE, 1, 1, 0, 0, 0, 0, 0, 0);
 
     // Store result in Mem[SP]
-    cpu->MARA = cpu->regBank.registers[4];
-    cpu->MARB = cpu->regBank.registers[5];
-    WORD nAddress = getMARWord(cpu);
-    memory[nAddress] = cpu->regBank.registers[1];
-    //printf("M[%d]=%d\n",nAddress, cpu->regBank.registers[1]);
+    move_to_mar(cpu, 4, 5);
+    cpu_byte_ident(cpu, 1, MDRE, 0, 0, 0);
+    mem_dbg_write_mdre(cpu);
 
     // Increment base address.
-    struct ALUByteResult BAloRes = byte_add_nocarry(cpu->regBank.registers[5], 1);
-    cpu->regBank.registers[5] = BAloRes.result;
-    cpu->regBank.registers[4] = byte_add_carry(cpu->regBank.registers[4], 0, BAloRes.NZVC[C]).result;
+    cpu_byte_add_nocarry(cpu, 5, 23, 5, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 4, 22, 4, S, 0, 0, 0, 0, 0, 0);
 
     // Update microprogram counter 
-    cpu->microPC = 6;
+    update_UPC(cpu, AUTO_INCR, 0, 0);
 
     // Termination does not halt here.
     return 0;

@@ -10,7 +10,8 @@ typedef uint32_t DWORD;
 typedef uint16_t WORD;
 typedef uint8_t BYTE;
 typedef uint8_t FLAG;
-
+// Define a type to represent a register number
+typedef  int8_t REGNUM;
 typedef uint16_t MCAddress;
 
 #endif

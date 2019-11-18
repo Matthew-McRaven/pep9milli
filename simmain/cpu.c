@@ -1,5 +1,5 @@
 #include "cpu.h"
-
+#include "alufunc.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +22,20 @@ void zeroMemory(struct CPU* cpu)
     memset(memory, 0 , sizeof(memory));
 }
 
+void init_static_regs(struct CPU *cpu)
+{
+    cpu->regBank.registers[22] = 0x00;
+    cpu->regBank.registers[23] = 0x01;
+    cpu->regBank.registers[24] = 0x02;
+    cpu->regBank.registers[25] = 0x03;
+    cpu->regBank.registers[26] = 0x04;
+    cpu->regBank.registers[27] = 0x08;
+    cpu->regBank.registers[28] = 0xF0;
+    cpu->regBank.registers[29] = 0xF6;
+    cpu->regBank.registers[30] = 0xFE;
+    cpu->regBank.registers[31] = 0xFF;
+
+}
 /*
  * Functions to read state of CPU.
  */
