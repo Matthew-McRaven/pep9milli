@@ -4,8 +4,7 @@ asmcode = dummymain.s alufunc.s cpu.s cpufunc.s sim.s
 objects = dummymain.o alufunc.o cpu.o cpufunc.o sim.o
 
 build : $(objects)
-	gcc -L/home/matthewmcraven/klee/klee/build/lib \
-	$(objects) -fPIC -o dummymain.out \
+	gcc $(objects) -fPIC -o dummymain.out \
 	-lkleeBasic -lkleeCore -lkleaverExpr -lkleaverSolver \
 	-lkleeModule -lkleeRuntest -lkleeSupport
 

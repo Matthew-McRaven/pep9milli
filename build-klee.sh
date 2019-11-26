@@ -64,6 +64,15 @@ git clone https://github.com/klee/klee.git
 	make -j4
 	make check
 	sudo make install
+    # Make install does not copy required libs into /usr/local/lib,
+    # causing Klee to crash at runtime.
+    sudo cp lib/libkleaverExpr.a /usr/local/lib/
+    sudo cp lib/libkleaverSolver.a /usr/local/lib/
+    sudo cp lib/libkleeBasic.a /usr/local/lib/
+    sudo cp lib/libkleeCore.a /usr/local/lib/
+    sudo cp lib/libkleeModule.a /usr/local/lib/
+    sudo cp lib/libkleeModule.a /usr/local/lib/
+    sudo cp lib/libkleeSupport.a /usr/local/lib/
 )
 
 # Install tools to visualize runs.
