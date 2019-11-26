@@ -1,3 +1,6 @@
+#Install CMAKE so that we may build our project.
+sudo apt-get -y install cmake
+
 #Install python dependencies
 sudo apt-get -y install python-pip
 

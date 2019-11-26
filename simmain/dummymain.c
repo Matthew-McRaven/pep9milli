@@ -15,7 +15,7 @@ FLAG executeSim(struct CPU *cpu)
     initCPU(cpu);
     cpu->microPC = 0;
     while(!finished) {
-        finished = microcodeTable[cpu->microPC](cpu);
+        finished = fetch_current_line(cpu)(cpu);
     }
     return testCPU(cpu);
 }
