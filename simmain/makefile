@@ -76,12 +76,12 @@ memory.o: memory.s
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simbytetest.c -o sim.bc
 
 # Successive fibonnaci numbers in registers.
-#sim.bc: simcfibregbyte.c simcfibregbyte.h
+#sim.bc: simcfibregbyte.c sim.h
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibregbyte.c -o sim.bc
 
 # Successive fibonnaci numbers in memory.
-sim.bc: simcfibmembyte.c
-	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
+#sim.bc: simcfibmembyte.c
+	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
 
 sim.s: sim.bc
 	llc-6.0 -relocation-model=pic sim.bc  -o sim.s
