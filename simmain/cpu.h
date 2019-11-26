@@ -36,13 +36,9 @@ struct CPU
     MCAddress microPC;
 
 };
-// Memory section
-BYTE memory[0x10000];
 
-typedef FLAG(*MicrocodeLine)(struct CPU*);
 // Initialize all values in a CPU to zero
 void zeroCPU(struct CPU* cpu);
-void zeroMemory(struct CPU* cpu);    
 void init_static_regs(struct CPU *cpu);
 /*
  * Functions to read state of CPU.

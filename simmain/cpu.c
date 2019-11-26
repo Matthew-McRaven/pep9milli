@@ -17,11 +17,6 @@ void zeroCPU(struct CPU* cpu)
     memset(cpu->PSNVCbits, 0 ,sizeof(cpu->PSNVCbits));
 }
 
-void zeroMemory(struct CPU* cpu)
-{
-    memset(memory, 0 , sizeof(memory));
-}
-
 void init_static_regs(struct CPU *cpu)
 {
     cpu->regBank.registers[22] = 0x00;

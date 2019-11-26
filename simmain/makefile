@@ -1,33 +1,33 @@
-sources = dummymain.c alufunc.c cpu.c nopsim.c 
-bitcode = dummymain.bc alufunc.bc cpu.bc cpufunc.bc sim.bc
-asmcode = dummymain.s alufunc.s cpu.s cpufunc.s sim.s
-objects = dummymain.o alufunc.o cpu.o cpufunc.o sim.o
+sources = main.c alufunc.c cpu.c memory.c
+bitcode = main.bc alufunc.bc cpu.bc cpufunc.bc memory.bc sim.bc
+asmcode = main.s alufunc.s cpu.s cpufunc.s memory.s sim.s 
+objects = main.o alufunc.o cpu.o cpufunc.o memory.o sim.o
 
 build : $(objects)
-	gcc $(objects) -fPIC -o dummymain.out \
+	gcc $(objects) -fPIC -o main.out \
 	-lkleeBasic -lkleeCore -lkleaverExpr -lkleaverSolver \
 	-lkleeModule -lkleeRuntest -lkleeSupport
 
-klee: dummymain.bcl
-	klee  --libc=uclibc --posix-runtime -external-calls=all dummymain.bcl
+klee: main.bcl
+	klee  --libc=uclibc --posix-runtime -external-calls=all main.bcl
 	#See https://klee.github.io/docs/options/ for ideas on linking in external files.
 	#klee dummymain.bcl
 	
-dummymain.bcl: $(bitcode)
+main.bcl: $(bitcode)
 	# The RDF-DUMP flag is undocumented, but it preserves all
 	# debug information in the linked bitcode.
 	# This is valuable for visualization of test coverage.
 	#clang-6.0 -I /home/matthewmcraven/klee/klee/include/ -c -g -emit-llvm $(sources) -o dummymain.bc;
-	llvm-link-6.0 -rdf-dump $(bitcode) -o dummymain.bcl
+	llvm-link-6.0 -rdf-dump $(bitcode) -o main.bcl
 
-dummymain.bc: dummymain.c defs.h alufunc.h cpu.h
-	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -c -g -emit-llvm dummymain.c
+main.bc: main.c defs.h alufunc.h cpu.h sim.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -c -g -emit-llvm main.c
 
-dummymain.s: dummymain.bc alufunc.s
-	llc-6.0 -relocation-model=pic dummymain.bc  -o dummymain.s
+main.s: main.bc alufunc.s
+	llc-6.0 -relocation-model=pic main.bc  -o main.s
 
-dummymain.o: dummymain.s
-	as -o dummymain.o dummymain.s 
+main.o: main.s
+	as -o main.o main.s 
 
 
 alufunc.bc: alufunc.c defs.h
@@ -56,14 +56,23 @@ cpufunc.s: cpufunc.bc
 	llc-6.0 -relocation-model=pic cpufunc.bc  -o cpufunc.s
 
 cpufunc.o: cpufunc.s
-	as -o cpufunc.o cpufunc.s 
+	as -o cpufunc.o cpufunc.s
+
+memory.bc: memory.c memory.h
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm memory.c
+
+memory.s: memory.bc
+	llc-6.0 -relocation-model=pic memory.bc  -o memory.s
+
+memory.o: memory.s
+	as -o memory.o memory.s 
 
 # NOP simulation
 #sim.bc: nopsim.c sim.h
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm nopsim.c -o sim.bc
 
 # Simple arithmetic rountine test
-#sim.bc: simbytetest.c simbytetest.h
+#sim.bc: simbytetest.c
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simbytetest.c -o sim.bc
 
 # Successive fibonnaci numbers in registers.
@@ -71,7 +80,7 @@ cpufunc.o: cpufunc.s
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibregbyte.c -o sim.bc
 
 # Successive fibonnaci numbers in memory.
-sim.bc: simcfibmembyte.c simcfibmembyte.h
+sim.bc: simcfibmembyte.c
 	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
 
 sim.s: sim.bc

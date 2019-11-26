@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-FLAG update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget, MCAddress falseTarget)
+FLAG cpu_update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget, MCAddress falseTarget)
 {
     switch(type) {
         case Unconditional:
@@ -115,11 +115,11 @@ FLAG update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget, MC
     }
     return 0;
 }
-void set_prefetch_flag(struct CPU *cpu, FLAG value)
+void cpu_set_prefetch_flag(struct CPU *cpu, FLAG value)
 {
     cpu->PSNVCbits[P] = value;
 }
-void move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn)
+void cpu_move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn)
 {
     // A bus value may only be from register bank.
     assert(arn>=0 && arn<=31);
@@ -130,7 +130,7 @@ void move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn)
     cpu->MARA = cpu->regBank.registers[arn];
     cpu->MARB = cpu->regBank.registers[brn];
 }
-void store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn)
+void cpu_store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn)
 {
     if(crn == MDRO) {
         cpu->MDRO = result->result;
@@ -143,7 +143,7 @@ void store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn)
     }
 }
 
-void save_status_bits(struct CPU* cpu, struct ALUByteResult* result, FLAG storeN, FLAG andZ,
+void cpu_save_status_bits(struct CPU* cpu, struct ALUByteResult* result, FLAG storeN, FLAG andZ,
 FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
 {
     if(storeN) {
@@ -193,8 +193,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_add_nocarry(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 
 }
 
@@ -225,9 +225,9 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     
     //printf("start: %d\n", arv);
     struct ALUByteResult result = byte_add_carry(arv, brv, cpu->PSNVCbits[carryIn]);
-    store_c(cpu, &result, crn);
+    cpu_store_c(cpu, &result, crn);
     //printf("end: %d\n", cpu->regBank.registers[crn]);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 }
 
 void cpu_byte_sub_nocarry(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
@@ -255,8 +255,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_sub_nocarry(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 
 }
 
@@ -286,8 +286,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     BYTE brv = cpu->regBank.registers[brn];
     
     struct ALUByteResult result = byte_sub_carry(arv, brv, cpu->PSNVCbits[carryIn]);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 }
 
 void cpu_byte_and(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
@@ -316,8 +316,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_and(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_nand(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
@@ -346,8 +346,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_nand(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_or(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
@@ -376,8 +376,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_or(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_nor(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
@@ -406,8 +406,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_nor(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 void cpu_byte_xor(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
 FLAG storeN, FLAG andZ, FLAG storeZ)
@@ -435,8 +435,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_xor(arv, brv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_ident(struct CPU* cpu, REGNUM arn, REGNUM crn, 
@@ -460,8 +460,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     }
 
     struct ALUByteResult result = byte_ident(arv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_not(struct CPU* cpu, REGNUM arn, REGNUM crn, 
@@ -485,8 +485,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     }
 
     struct ALUByteResult result = byte_not(arv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, 0, 0);
 }
 
 void cpu_byte_rol(struct CPU* cpu, REGNUM arn, REGNUM crn, enum StatusBits carryIn, 
@@ -510,8 +510,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     }
     
     struct ALUByteResult result = byte_rol(arv, cpu->PSNVCbits[carryIn]);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 }
 
 void cpu_byte_ror(struct CPU* cpu, REGNUM arn, REGNUM crn, enum StatusBits carryIn, 
@@ -535,8 +535,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     }
     
     struct ALUByteResult result = byte_ror(arv, cpu->PSNVCbits[carryIn]);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, storeC, storeS);
 }
 void cpu_byte_asl(struct CPU* cpu, REGNUM arn, REGNUM crn, 
 FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
@@ -559,8 +559,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     }
     
     struct ALUByteResult result = byte_asl(arv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 
 }
 void cpu_byte_asr(struct CPU* cpu, REGNUM arn, REGNUM crn,
@@ -584,8 +584,8 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     }
     
     struct ALUByteResult result = byte_asr(arv);
-    store_c(cpu, &result, crn);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, storeC, storeS);
+    cpu_store_c(cpu, &result, crn);
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, 0, storeC, storeS);
 
 }
 
@@ -609,7 +609,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     }
     byte_flags(0);
     struct ALUByteResult result = byte_flags(arv);
-    save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS); 
+    cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS); 
 }
 
 void cpu_read_flags(struct CPU* cpu, REGNUM crn)
@@ -629,27 +629,4 @@ void cpu_read_flags(struct CPU* cpu, REGNUM crn)
         cpu->regBank.registers[crn] = output;
     }
 
-}
-
-// Debug methods that allow read, writing exactly one byte
-// from memory, ignoring alignment conditions.
-void mem_dbg_read_into_mdre(struct CPU* cpu)
-{
-    WORD address = getMARWord(cpu);
-    cpu->MDRE = memory[address];
-}
-void mem_dbg_read_into_mdro(struct CPU* cpu)
-{
-    WORD address = getMARWord(cpu);
-    cpu->MDRO = memory[address];
-}
-void mem_dbg_write_mdre(struct CPU* cpu)
-{
-    WORD address = getMARWord(cpu);
-    memory[address] = cpu->MDRE;
-}
-void mem_dbg_write_mdro(struct CPU* cpu)
-{
-    WORD address = getMARWord(cpu);
-    memory[address] = cpu->MDRO;
 }

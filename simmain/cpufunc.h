@@ -19,14 +19,14 @@ enum BRANCH_TYPE
 };
 
 // Microcode helper functions
-FLAG update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget, MCAddress falseTarget);
-void set_prefetch_flag(struct CPU *cpu, FLAG value);
-void move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn);
+FLAG cpu_update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget, MCAddress falseTarget);
+void cpu_set_prefetch_flag(struct CPU *cpu, FLAG value);
+void cpu_move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn);
 
 
 // Methods to simplify saving results.
-void store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn);
-void save_status_bits(struct CPU* cpu, struct ALUByteResult* result, FLAG storeN, FLAG andZ,
+void cpu_store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn);
+void cpu_save_status_bits(struct CPU* cpu, struct ALUByteResult* result, FLAG storeN, FLAG andZ,
 FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
 
 // Binary arithmatic operations.
@@ -71,16 +71,5 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
 void cpu_set_flags(struct CPU* cpu, REGNUM arn,
 FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
 void cpu_read_flags(struct CPU* cpu, REGNUM crn);
-
-// Memory read / write operations
-//void memory_read_word(struct CPU* cpu, FLAG intoMDRE, FLAG intoMDRO);
-//void memory_write_word(struct CPU* cpu);
-
-// Debug methods that allow read, writing exactly one byte
-// from memory, ignoring alignment conditions.
-void mem_dbg_read_into_mdre(struct CPU* cpu);
-void mem_dbg_read_into_mdro(struct CPU* cpu);
-void mem_dbg_write_mdre(struct CPU* cpu);
-void mem_dbg_write_mdro(struct CPU* cpu);
 
 #endif //CPUFUNC_H
