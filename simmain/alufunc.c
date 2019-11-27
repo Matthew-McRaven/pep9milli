@@ -113,7 +113,7 @@ struct ALUByteResult byte_ror(BYTE a, FLAG carryIn)
     result.result = a >> 1 | (carryIn ? 0x80 : 0);
     result.NZVC[N] = result.result & 0x80 ? 1 : 0;
     result.NZVC[Z] = result.result == 0 ? 1 : 0; 
-     // Carry out equals the hi order bit
+     // Carry out equals the lo order bit
     result.NZVC[C] = (a & 0x01) ? 1 : 0;
     return result;
 }
