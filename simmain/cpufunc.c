@@ -119,6 +119,7 @@ void cpu_set_prefetch_flag(struct CPU *cpu, FLAG value)
 {
     cpu->PSNVCbits[P] = value;
 }
+
 void cpu_move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn)
 {
     // A bus value may only be from register bank.
@@ -130,9 +131,14 @@ void cpu_move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn)
     cpu->MARA = cpu->regBank.registers[arn];
     cpu->MARB = cpu->regBank.registers[brn];
 }
+
 void cpu_store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn)
 {
-    if(crn == MDRO) {
+    // Don't store a register of none type.
+    if(crn == NONE) {
+        return;
+    }
+    else if(crn == MDRO) {
         cpu->MDRO = result->result;
     } 
     else if(crn == MDRE) {
@@ -175,7 +181,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -206,7 +212,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -237,7 +243,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -268,7 +274,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -298,7 +304,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -328,7 +334,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -358,7 +364,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -388,7 +394,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -417,7 +423,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // B bus value may only be from register bank.
     assert( brn>=0 && brn<=31);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -445,7 +451,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
     // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -470,7 +476,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ)
         // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -495,7 +501,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -520,7 +526,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -544,7 +550,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;
@@ -569,7 +575,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     // A bus value may only be from register bank, MDRE, MDRO;
     assert((arn>=0 && arn<=31) || arn==MDRO || arn==MDRE);
     // C bus value may go to register bank, MDRE, MDRO.
-    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE);
+    assert((crn>=0 && crn<=31) || crn==MDRO || crn==MDRE || crn == NONE);
 
     // A Register Value.
     BYTE arv;

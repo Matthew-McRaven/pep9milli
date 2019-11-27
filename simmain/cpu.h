@@ -6,7 +6,9 @@ enum Registers
     A = 0, X = 2, SP = 4, PC = 6, 
     IS = 8, OS = 9, PF = 10,
     MARA = 32, MARB = 33, MDRE = 34, MDRO = 35,
-    MICROPC = 36
+    MICROPC = 36,
+    // Choose NONE, if you don't want an operation to be clocked into any register.
+    NONE = 100
 };
 enum StatusBits 
 {
