@@ -21,7 +21,7 @@ void mem_dbg_write_mdre(struct CPU* cpu, struct MainMemory* main_memory);
 void mem_dbg_write_mdro(struct CPU* cpu, struct MainMemory* main_memory);
 
 // Memory read / write operations
-//void memory_read_word(struct CPU* cpu, FLAG intoMDRE, FLAG intoMDRO);
-//void memory_write_word(struct CPU* cpu);
+void mem_read_word(struct CPU* cpu, struct MainMemory* main_memory, FLAG intoMDRE, FLAG intoMDRO);
+//void mem_write_word(struct CPU* cpu, struct MainMemory* main_memory);
 
 #endif
