@@ -80,8 +80,8 @@ memory.o: memory.s
 	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibregbyte.c -o sim.bc
 
 # Successive fibonnaci numbers in memory.
-#sim.bc: simcfibmembyte.c
-	#clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
+sim.bc: simcfibmembyte.c
+	clang-6.0 -fPIC -I /home/matthewmcraven/klee/klee/include/ -g -c -emit-llvm simcfibmembyte.c -o sim.bc
 
 sim.s: sim.bc
 	llc-6.0 -relocation-model=pic sim.bc  -o sim.s
@@ -90,6 +90,6 @@ sim.o: sim.s
 	as -o sim.o sim.s 
 
 clean:
-	rm $(bitcode) $(asmcode) $(objects) dummymain.out dummymain.bcl 
+	rm $(bitcode) $(asmcode) $(objects) main.out main.bcl 
 	rm -rf klee-*/
 	@
