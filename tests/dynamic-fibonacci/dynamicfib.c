@@ -108,7 +108,7 @@ FLAG clearSP(struct VerificationModel *model)
     // Without guidance, klee will check every possible memory address.
     // I am here to guide it, so it must less dump decisions.
     // I manually guide it to "interesting" memory locations.
-    BYTE x;
+    /*BYTE x;
     klee_make_symbolic(&x, sizeof(x), "choice");
     klee_assume(x<=5);
     if(x == 0) {cpu->regBank.registers[6] = 0x00 ; cpu->regBank.registers[7] = 0x00;}
@@ -116,7 +116,7 @@ FLAG clearSP(struct VerificationModel *model)
     else if (x == 2) {cpu->regBank.registers[6] = 0xdd; cpu->regBank.registers[7] = 0xe1;}
     else if (x == 3) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xde;}
     else if (x == 4) {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xf4;}
-    else {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xfe;}
+    else {cpu->regBank.registers[6] = 0xff; cpu->regBank.registers[7] = 0xfe;}*/
 
     WORD baseAddress = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
 
