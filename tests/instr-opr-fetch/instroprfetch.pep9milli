@@ -13,13 +13,10 @@ even_opr:   MemRead(PC, 1, 1)
             RB9 := ident(MDRE)
             RB10:= ident(MDRE)
             PC  := add(PC, two); goto end
-odd_opr:    if PF goto PFV_opr else PFI_opr
-PFV_opr     RB9 := ident(RB11)
-nxtftch:    PC  := add(PC, two)
+odd_opr     RB9 := ident(RB11)
+            PC  := add(PC, two)
             MemRead(PC, 1, 1)
             RB10:= ident(MDRE)
             P   := ident(MDRO)
             PF  := 1; P; goto end
-PFI_opr     MemRead(PC, 1, 1)
-            RB9 := ident(MDRO); goto nxtftch
 end:        STOP()

@@ -50,8 +50,6 @@ FLAG even_incr_PC2(struct VerificationModel* model);
 
 // Determine if prefetch is valid
 FLAG odd_opr(struct VerificationModel* model);
-// Prefetch is valid, move P to RB9.
-FLAG PFV_opr(struct VerificationModel* model);
 // Increment PC by 2.
 FLAG nxtftch(struct VerificationModel* model);
 // Fetch MDRE/O at PC.
@@ -62,10 +60,6 @@ FLAG odd_move_rb10(struct VerificationModel* model);
 FLAG odd_move_p(struct VerificationModel* model);
 // Set the prefetch valid bit to true.
 FLAG odd_set_pf(struct VerificationModel* model);
-// Load Mem[PC] into MDRO due to prefetch miss.
-FLAG PFI_opr(struct VerificationModel* model);
-// Move MDRO to RB9.
-FLAG odd_move_rb9(struct VerificationModel* model);
 
 // Halt execution
 FLAG end(struct VerificationModel* model);
@@ -86,17 +80,14 @@ static MicrocodeLine microcodeTable[] =
     even_opr,               //11
     even_move_rb9,          //12
     even_move_rb10,         //13
-    even_incr_PC2,         //14
+    even_incr_PC2,          //14
     odd_opr,                //15
-    PFV_opr,                //16
-    nxtftch,                //17
-    odd_memread,            //18
-    odd_move_rb10,          //19
-    odd_move_p,             //20
-    odd_set_pf,             //21
-    PFI_opr,                //22
-    odd_move_rb9,           //23
-    end,                    //24
+    nxtftch,                //16
+    odd_memread,            //17
+    odd_move_rb10,          //18
+    odd_move_p,             //29
+    odd_set_pf,             //20
+    end,                    //21
 };
 
 WORD starting_PC;
@@ -323,7 +314,7 @@ FLAG decode_un(struct VerificationModel* model)
 
     // If unary, go to STOP().
     if(is_unary_decoder[cpu->regBank.registers[8]]) {
-        cpu->microPC = 24;
+        cpu->microPC = 21;
     }
     // Otherwise load operand.
     else {
@@ -410,32 +401,13 @@ FLAG even_incr_PC2(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu->microPC = 24;
+    cpu->microPC = 21;
 
     return 0;
 }
 
 // Determine if prefetch is valid
 FLAG odd_opr(struct VerificationModel* model)
-{
-    // Cache pointer to cpu to save repeated pointer lookups.
-    struct CPU* cpu = model->cpu;
-    struct MainMemory* memory = model->main_memory;
-
-    // If prefetch is valid
-    if(cpu->PSNVCbits[P]) {
-        cpu->microPC = 16;
-    }
-    // If prefetch is invalid
-    else {
-        assert(0);
-        cpu->microPC = 22;
-    }
-    return 0;
-}
-
-// Prefetch is valid, move P to RB9.
-FLAG PFV_opr(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
@@ -449,7 +421,7 @@ FLAG PFV_opr(struct VerificationModel* model)
     klee_assert(memory->memory[address] == cpu->regBank.registers[9]);
     klee_assert(address == (WORD)(starting_PC + 1));
     klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
-    cpu->microPC = 17;
+    cpu->microPC = 16;
 
     return 0;
 }
@@ -464,7 +436,7 @@ FLAG nxtftch(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu->microPC = 18;
+    cpu->microPC = 17;
 
     return 0;
 
@@ -480,7 +452,7 @@ FLAG odd_memread(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu->microPC = 19;
+    cpu->microPC = 18;
 
     return 0;
 }
@@ -493,7 +465,7 @@ FLAG odd_move_rb10(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 10, 0, 0, 0);
 
-    cpu->microPC = 20;
+    cpu->microPC = 19;
 
     return 0;
 }
@@ -506,7 +478,7 @@ FLAG odd_move_p(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 11, 0, 0, 0);
     
-    cpu->microPC = 21;
+    cpu->microPC = 20;
 
     return 0;
 }
@@ -519,34 +491,7 @@ FLAG odd_set_pf(struct VerificationModel* model)
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu->microPC = 24;
-
-    return 0;
-}
-
-// Load Mem[PC] into MDRO due to prefetch miss.
-FLAG PFI_opr(struct VerificationModel* model)
-{
-    // Cache pointer to cpu to save repeated pointer lookups.
-    struct CPU* cpu = model->cpu;
-    struct MainMemory* memory = model->main_memory;
-
-    cpu_move_to_mar(cpu, 6, 7);
-    mem_read_word(cpu, memory, 1, 1);
-
-    cpu->microPC = 23;
-
-    return 0;
-}
-// Move MDRO to RB9.
-FLAG odd_move_rb9(struct VerificationModel* model)
-{
-    // Cache pointer to cpu to save repeated pointer lookups.
-    struct CPU* cpu = model->cpu;
-
-    cpu_byte_ident(cpu, MDRO, 9, 0, 0, 0);
-
-    cpu->microPC = 17;
+    cpu->microPC = 21;
 
     return 0;
 }
