@@ -1,0 +1,22 @@
+splitEO:    if PCEven goto even_fetch else odd_fetch
+even_fetch: MemRead(PC, 1, 1)
+            PF  := 1; P
+            IS  := ident(MDRE)
+            P   := ident(MDRO); goto decode_un
+odd_fetch:  if PF goto PF_Valid else PF_Invalid
+PF_Valid:   IS  := ident(P) goto decode_un
+PF_Invalid: MemRead(PC, 1, 1)
+            P   := ident(MDRO)
+decode_un:  PC  := add(PC, one); if IsUnary goto end else opr_fetch
+opr_fetch:  if PCEven goto even_opr else odd_opr
+even_opr:   MemRead(PC, 1, 1)
+            RB9 := ident(MDRE)
+            RB10:= ident(MDRE)
+            PC  := add(PC, two); goto end
+odd_opr     RB9 := ident(RB11)
+            PC  := add(PC, two)
+            MemRead(PC, 1, 1)
+            RB10:= ident(MDRE)
+            P   := ident(MDRO)
+            PF  := 1; P; goto end
+end:        STOP()
