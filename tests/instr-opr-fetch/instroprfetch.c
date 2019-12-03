@@ -128,9 +128,9 @@ void init_model(struct VerificationModel *model)
     memset(cpu->is_unary_decoder, 0, 256);
     // Instructions from 0 to 17 are unary.
     // Instructions from 18-37 are non-unary.
-    for(int it=18; it <= 37; it++) is_unary_decoder[it] = 1;
+    for(int it=18; it <= 37; it++) cpu->is_unary_decoder[it] = 1;
     // Instructions from 38 to 79 are unary.
-    for(int it=80; it <= 255; it++) is_unary_decoder[it] = 1;
+    for(int it=80; it <= 255; it++) cpu->is_unary_decoder[it] = 1;
 
 }
 

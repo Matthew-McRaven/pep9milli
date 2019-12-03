@@ -70,7 +70,7 @@ FLAG opr_decode(struct VerificationModel* model);
 // Immediate Addressing.
 FLAG i_mode(struct VerificationModel* model);
 
-//Direct Addressing
+// Direct Addressing
 FLAG d_mode(struct VerificationModel* model);
 FLAG d_det_odd(struct VerificationModel* model);
 FLAG d_e_mode(struct VerificationModel* model);
@@ -82,7 +82,18 @@ FLAG d_o_next_addr(struct VerificationModel* model);
 FLAG d_o_memread2(struct VerificationModel* model);
 FLAG d_o_move_rb21(struct VerificationModel* model);
 
-
+// iNdirect Addressing
+FLAG n_mode(struct VerificationModel* model);
+FLAG n_det_odd(struct VerificationModel* model);
+FLAG n1_e_mode(struct VerificationModel* model);
+FLAG n1_e_move_rb18(struct VerificationModel* model);
+FLAG n1_e_move_rb19(struct VerificationModel* model);
+FLAG n1_o_mode(struct VerificationModel* model);
+FLAG n1_o_next_addr(struct VerificationModel* model);
+FLAG n1_o_move_rb18(struct VerificationModel* model);
+FLAG n1_o_memread2(struct VerificationModel* model);
+FLAG n1_o_move_rb19(struct VerificationModel* model);
+FLAG n2_mode(struct VerificationModel* model);
 
 static MicrocodeLine microcodeTable[] = 
 {
@@ -120,6 +131,17 @@ static MicrocodeLine microcodeTable[] =
     d_o_next_addr,          //31
     d_o_memread2,           //32
     d_o_move_rb21,          //33
+    n_mode,                 //34
+    n_det_odd,              //35
+    n1_e_mode,              //36
+    n1_e_move_rb18,         //37
+    n1_e_move_rb19,         //38
+    n1_o_mode,              //39
+    n1_o_next_addr,         //40
+    n1_o_move_rb18,         //41
+    n1_o_memread2,          //42
+    n1_o_move_rb19,         //43
+    n2_mode,                //44
 };
 
 WORD starting_PC;
@@ -166,10 +188,13 @@ void init_model(struct VerificationModel *model)
     for(int it=80; it <= 255; it++) cpu->is_unary_decoder[it] = 1;
 
     // Initialize addressing mode decoder.
-    memset(instr_addr_mode, i_addr, 256);
-    for(int it=0; it<=255; it++) {
-        if(instr_addr_mode[it] == i_addr) cpu->addressing_mode_decoder[it] = 23;
-        else cpu->addressing_mode_decoder[it] = 23;
+    int x; klee_make_symbolic(&x, sizeof(x), "Choice");
+    for(int it=0; it <= 255; it++) {instr_addr_mode[it] = x;}
+    for(int it=0; it <= 255; it++) {
+        if(instr_addr_mode[it] == i_addr) {cpu->addressing_mode_decoder[it] = 23;}
+        else if(instr_addr_mode[it] == d_addr){cpu->addressing_mode_decoder[it] = 24;}
+        else if(instr_addr_mode[it] == n_addr){cpu->addressing_mode_decoder[it] = 34;}
+        else{cpu->addressing_mode_decoder[it] = 21;}
     }
     //addressing_mode_decoder[255] = 23;
 
@@ -203,11 +228,26 @@ FLAG test_model(struct VerificationModel *model)
         klee_assert(!(starting_PC % 2 == 0) | (cpu->PSNVCbits[P] && cpu->regBank.registers[11] == memory->memory[(WORD)(starting_PC + 3)]));
         
         // RW20 == Operand Specifier
-        if(instr_addr_mode[cpu->regBank.registers[8]] == i_addr) {
+        enum AddressingModes mode = instr_addr_mode[cpu->regBank.registers[8]];
+        //klee_assert(mode == n_addr);
+        if(mode == i_addr) {
             klee_assert(cpu->regBank.registers[9]  == cpu->regBank.registers[20]);
             klee_assert(cpu->regBank.registers[10] == cpu->regBank.registers[21]);
-        } else if(0) {
-
+        } 
+        else if(mode == d_addr) {
+            klee_assert(cpu->regBank.registers[9]  == cpu->regBank.registers[18]);
+            klee_assert(cpu->regBank.registers[10] == cpu->regBank.registers[19]);
+            WORD d_address = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+            klee_assert(cpu->regBank.registers[20] == memory->memory[d_address]);
+            klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(d_address + 1)]);
+        } 
+        else if(mode == n_addr) {
+            WORD n_address = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+            klee_assert(cpu->regBank.registers[18] == memory->memory[n_address]);
+            klee_assert(cpu->regBank.registers[19] == memory->memory[(WORD)(n_address + 1)]);
+            WORD n2_address = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19];
+            klee_assert(cpu->regBank.registers[20] == memory->memory[n2_address]);
+            klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(n2_address + 1)]);
         }
     }
     return 1;
@@ -228,9 +268,7 @@ FLAG determine_even_odd(struct VerificationModel* model)
 
     WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
     
-    cpu_update_UPC(cpu, BRS, 5, 1);
-
-    return 0;
+    return cpu_update_UPC(cpu, BRS, 5, 1);
 }
 
 // Begin even fetch, load PC from mem
@@ -243,9 +281,7 @@ FLAG even_fetch(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 2, 2);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 2, 2);
 }
 
 // Set the prefetch valid bit to true.
@@ -256,9 +292,7 @@ FLAG set_prefetch_valid(struct VerificationModel* model)
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 3, 3);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 3, 3);
 }
 
 // Move the value in MDRE to IS.
@@ -269,9 +303,7 @@ FLAG even_move_to_IS(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 8, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 4, 4);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 4, 4);
 }
 
 // Move the value in MDRO to T1.
@@ -282,9 +314,7 @@ FLAG even_move_to_T1(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 11, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 9, 9);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 9, 9);
 }
 
 // Determine if the prefetch should be used or not.
@@ -293,9 +323,7 @@ FLAG odd_fetch(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    cpu_update_UPC(cpu, IsPrefetchValid, 6, 7);
-
-    return 0;
+    return cpu_update_UPC(cpu, IsPrefetchValid, 6, 7);
 }
 
 // Prefetch is valid, so move T1 to IS.
@@ -306,9 +334,7 @@ FLAG PF_Valid(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, 11, 8, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 9, 9);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 9, 9);
 }
 
 // Prefetch is invalid, so initiate memory fetch.
@@ -321,10 +347,9 @@ FLAG PF_Invalid(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 8, 8);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 8, 8);
 }
+
 // Move MDRO to IS.
 FLAG odd_move_to_IS(struct VerificationModel* model)
 {
@@ -334,9 +359,7 @@ FLAG odd_move_to_IS(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 8, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 9, 9);
-    
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 9, 9);
 }
 
 // Increment program counter, decide if instr is unary.
@@ -351,9 +374,7 @@ FLAG decode_un(struct VerificationModel* model)
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
     // If unary, go to STOP().
-    cpu_update_UPC(cpu, IsUnary, 21, 10);
-
-    return 0;
+    return cpu_update_UPC(cpu, IsUnary, 21, 10);
 }
 
 FLAG opr_fetch(struct VerificationModel *model)
@@ -365,9 +386,7 @@ FLAG opr_fetch(struct VerificationModel *model)
 
     WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
     // If program counter is odd, follow odd path.
-    cpu_update_UPC(cpu, BRS, 15, 11);
-
-    return 0;
+    return cpu_update_UPC(cpu, BRS, 15, 11);
 }
 
 FLAG even_opr(struct VerificationModel* model)
@@ -379,9 +398,7 @@ FLAG even_opr(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 12, 12);
-
-    return 0;  
+    return cpu_update_UPC(cpu, Unconditional, 12, 12);
 }
 
 // Move MDRE to RB9.
@@ -393,9 +410,7 @@ FLAG even_move_rb9(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 9, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 13, 13);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 13, 13);
 }
 
 // Move MDREO to RB10.
@@ -407,9 +422,7 @@ FLAG even_move_rb10(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 10, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 14, 14);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 14, 14);
 }
 
 // Increment PC by 2.
@@ -423,9 +436,7 @@ FLAG even_incr_PC2(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 23, 23);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 22, 22);
 }
 
 // Determine if prefetch is valid
@@ -444,9 +455,7 @@ FLAG odd_opr(struct VerificationModel* model)
     klee_assert(address == (WORD)(starting_PC + 1));
     klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
 
-    cpu_update_UPC(cpu, Unconditional, 16, 16);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 16, 16);
 }
 
 // Increment PC by 2.
@@ -459,10 +468,7 @@ FLAG nxtftch(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 17, 17);
-
-    return 0;
-
+    return cpu_update_UPC(cpu, Unconditional, 17, 17);
 }
 
 // Fetch MDRE/O at PC.
@@ -475,9 +481,7 @@ FLAG odd_memread(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 18, 18);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 18, 18);
 }
 
 // Move MDRE to RB10.
@@ -488,9 +492,7 @@ FLAG odd_move_rb10(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 10, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 19, 19);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 19, 19);
 }
 
 // Move MDRO to P.
@@ -501,9 +503,7 @@ FLAG odd_move_p(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 11, 0, 0, 0);
     
-    cpu_update_UPC(cpu, Unconditional, 20, 20);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 20, 20);
 }
 
 // Set the prefetch valid bit to true.
@@ -514,9 +514,7 @@ FLAG odd_set_pf(struct VerificationModel* model)
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu_update_UPC(cpu, Unconditional, 23, 23);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 22, 22);
 }
 
 FLAG execute(struct VerificationModel *model)
@@ -533,10 +531,7 @@ FLAG opr_decode(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    cpu_update_UPC(cpu, AddressingModeDecoder, -1, -1);
-    //cpu->microPC = addressing_mode_decoder[cpu->regBank.registers[8]];
-
-    return 0;
+    return cpu_update_UPC(cpu, AddressingModeDecoder, -1, -1);
 }
 
 // Immediate Addressing.
@@ -549,19 +544,261 @@ FLAG i_mode(struct VerificationModel* model)
     cpu_byte_ident(cpu, 9, 20, 0, 0, 0);
     cpu_byte_ident(cpu, 10, 21, 0, 0, 0);
 
-    cpu_update_UPC(cpu, Unconditional, 21, 21);
-
-    return 0;
+    return cpu_update_UPC(cpu, Unconditional, 21, 21);
 }
 
 //Direct Addressing
-FLAG d_mode(struct VerificationModel* model){return 0;}
-FLAG d_det_odd(struct VerificationModel* model){return 0;}
-FLAG d_e_mode(struct VerificationModel* model){return 0;}
-FLAG d_e_move_rb20(struct VerificationModel* model){return 0;}
-FLAG d_e_move_rb21(struct VerificationModel* model){return 0;}
-FLAG d_o_mode(struct VerificationModel* model){return 0;}
-FLAG d_o_move_rb20(struct VerificationModel* model){return 0;}
-FLAG d_o_next_addr(struct VerificationModel* model){return 0;}
-FLAG d_o_memread2(struct VerificationModel* model){return 0;}
-FLAG d_o_move_rb21(struct VerificationModel* model){return 0;}
+FLAG d_mode(struct VerificationModel* model)
+{
+    //klee_assert(0);
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Move operand specifier to RW18
+    cpu_byte_ident(cpu, 9, 18, 0, 0, 0);
+    cpu_byte_ident(cpu, 10, 19, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 25, 25);
+}
+
+FLAG d_det_odd(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, BRS, 29, 26);
+}
+
+FLAG d_e_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 1, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 27, 27);
+}
+
+FLAG d_e_move_rb20(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRE, 20, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 28, 28);
+}
+
+FLAG d_e_move_rb21(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRO, 21, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 21, 21);
+}
+
+FLAG d_o_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 30, 30);
+}
+
+FLAG d_o_move_rb20(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRO, 20, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 31, 31);
+}
+
+FLAG d_o_next_addr(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_add_nocarry(cpu, 19, 23, 17, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 18, 22, 16, S, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 32, 32);
+}
+
+FLAG d_o_memread2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 16, 17);
+    mem_read_word(cpu, memory, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 33, 33);
+}
+
+FLAG d_o_move_rb21(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRE, 21, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 21, 21);
+}
+
+// iNdirect Addressing
+FLAG n_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Move operand specifier to RW18
+    cpu_byte_ident(cpu, 9, 18, 0, 0, 0);
+    cpu_byte_ident(cpu, 10, 19, 0, 0, 0);
+
+    WORD n_address = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+
+    klee_assert(cpu->regBank.registers[18] == cpu->regBank.registers[9]);
+    klee_assert(cpu->regBank.registers[19] == cpu->regBank.registers[10]);
+
+    return cpu_update_UPC(cpu, Unconditional, 35, 35);
+}
+
+FLAG n_det_odd(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
+
+    klee_assert(cpu->regBank.registers[18] == cpu->regBank.registers[9]);
+    klee_assert(cpu->regBank.registers[19] == cpu->regBank.registers[10]);
+
+    return cpu_update_UPC(cpu, BRS, 39, 36);
+}
+
+FLAG n1_e_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 1, 1);
+
+    klee_assert(cpu->regBank.registers[18] == cpu->regBank.registers[9]);
+    klee_assert(cpu->regBank.registers[19] == cpu->regBank.registers[10]);
+
+    return cpu_update_UPC(cpu, Unconditional, 37, 37);
+}
+
+FLAG n1_e_move_rb18(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRE, 18, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 38, 38);
+}
+
+FLAG n1_e_move_rb19(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_byte_ident(cpu, MDRO, 19, 0, 0, 0);
+
+    WORD n_address = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    klee_assert(cpu->regBank.registers[18] == memory->memory[n_address]);
+    klee_assert(cpu->regBank.registers[19] == memory->memory[(WORD)(n_address + 1)]);
+
+    return cpu_update_UPC(cpu, Unconditional, 44, 44);
+}
+
+FLAG n1_o_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 40, 40);
+}
+
+FLAG n1_o_next_addr(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Increment PC by 2.
+    cpu_byte_add_nocarry(cpu, 19, 23, 17, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 18, 22, 16, S, 0, 0, 0, 0, 0, 0);
+    
+    return cpu_update_UPC(cpu, Unconditional, 41, 41);
+}
+
+FLAG n1_o_move_rb18(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, MDRO, 18, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 42, 42);
+}
+
+
+
+FLAG n1_o_memread2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 16, 17);
+    mem_read_word(cpu, memory, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 43, 43);
+}
+
+FLAG n1_o_move_rb19(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_byte_ident(cpu, MDRE, 19, 0, 0, 0);
+
+    WORD n_address = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    klee_assert(cpu->regBank.registers[18] == memory->memory[n_address]);
+    klee_assert(cpu->regBank.registers[19] == memory->memory[(WORD)(n_address + 1)]);
+
+    return cpu_update_UPC(cpu, Unconditional, 44, 44);
+}
+
+FLAG n2_mode(struct VerificationModel* model)
+{
+    
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, BRS, 29, 26);
+}
