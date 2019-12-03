@@ -227,18 +227,9 @@ FLAG determine_even_odd(struct VerificationModel* model)
     cpu_byte_asr(cpu, 7, NONE, 0, 0, 0, 0, 0, 1);
 
     WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
-    // If program counter is odd, follow odd path.
-    if(cpu->PSNVCbits[S]) {
-        // Assert that address is odd.
-        klee_assert(address % 2 == 1);
-        cpu->microPC = 5;
-    }
-    // Otherwise follow even path.
-    else {
-        // Assert that address is even.
-        klee_assert(address % 2 == 0);
-        cpu->microPC = 1;
-    }
+    
+    cpu_update_UPC(cpu, BRS, 5, 1);
+
     return 0;
 }
 
@@ -252,7 +243,8 @@ FLAG even_fetch(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu->microPC = 2;
+    cpu_update_UPC(cpu, Unconditional, 2, 2);
+
     return 0;
 }
 
@@ -264,7 +256,7 @@ FLAG set_prefetch_valid(struct VerificationModel* model)
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu->microPC = 3;
+    cpu_update_UPC(cpu, Unconditional, 3, 3);
 
     return 0;
 }
@@ -277,7 +269,7 @@ FLAG even_move_to_IS(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 8, 0, 0, 0);
 
-    cpu->microPC = 4;
+    cpu_update_UPC(cpu, Unconditional, 4, 4);
 
     return 0;
 }
@@ -289,7 +281,8 @@ FLAG even_move_to_T1(struct VerificationModel* model)
     struct CPU* cpu = model->cpu;
 
     cpu_byte_ident(cpu, MDRO, 11, 0, 0, 0);
-    cpu->microPC = 9;
+
+    cpu_update_UPC(cpu, Unconditional, 9, 9);
 
     return 0;
 }
@@ -300,14 +293,7 @@ FLAG odd_fetch(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // If prefetch is valid
-    if(cpu->PSNVCbits[P]) {
-        cpu->microPC = 6;
-    }
-    // If prefetch is invalid
-    else {
-        cpu->microPC = 7;
-    }
+    cpu_update_UPC(cpu, IsPrefetchValid, 6, 7);
 
     return 0;
 }
@@ -320,7 +306,7 @@ FLAG PF_Valid(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, 11, 8, 0, 0, 0);
 
-    cpu->microPC = 9;
+    cpu_update_UPC(cpu, Unconditional, 9, 9);
 
     return 0;
 }
@@ -335,7 +321,7 @@ FLAG PF_Invalid(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu->microPC = 8;
+    cpu_update_UPC(cpu, Unconditional, 8, 8);
 
     return 0;
 }
@@ -347,8 +333,9 @@ FLAG odd_move_to_IS(struct VerificationModel* model)
     struct MainMemory* memory = model->main_memory;
 
     cpu_byte_ident(cpu, MDRO, 8, 0, 0, 0);
-    cpu->microPC = 9;
 
+    cpu_update_UPC(cpu, Unconditional, 9, 9);
+    
     return 0;
 }
 
@@ -378,17 +365,7 @@ FLAG opr_fetch(struct VerificationModel *model)
 
     WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
     // If program counter is odd, follow odd path.
-    if(cpu->PSNVCbits[S]) {
-        // Assert that address is odd.
-        klee_assert(address % 2 == 1);
-        cpu->microPC = 15;
-    }
-    // Otherwise follow even path.
-    else {
-        // Assert that address is even.
-        klee_assert(address % 2 == 0);
-        cpu->microPC = 11;
-    }
+    cpu_update_UPC(cpu, BRS, 15, 11);
 
     return 0;
 }
@@ -402,7 +379,7 @@ FLAG even_opr(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu->microPC = 12;
+    cpu_update_UPC(cpu, Unconditional, 12, 12);
 
     return 0;  
 }
@@ -416,7 +393,7 @@ FLAG even_move_rb9(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 9, 0, 0, 0);
 
-    cpu->microPC = 13;
+    cpu_update_UPC(cpu, Unconditional, 13, 13);
 
     return 0;
 }
@@ -430,7 +407,7 @@ FLAG even_move_rb10(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 10, 0, 0, 0);
 
-    cpu->microPC = 14;
+    cpu_update_UPC(cpu, Unconditional, 14, 14);
 
     return 0;
 }
@@ -446,7 +423,7 @@ FLAG even_incr_PC2(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu->microPC = 23;
+    cpu_update_UPC(cpu, Unconditional, 23, 23);
 
     return 0;
 }
@@ -466,7 +443,8 @@ FLAG odd_opr(struct VerificationModel* model)
     klee_assert(memory->memory[address] == cpu->regBank.registers[9]);
     klee_assert(address == (WORD)(starting_PC + 1));
     klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
-    cpu->microPC = 16;
+
+    cpu_update_UPC(cpu, Unconditional, 16, 16);
 
     return 0;
 }
@@ -481,7 +459,7 @@ FLAG nxtftch(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu->microPC = 17;
+    cpu_update_UPC(cpu, Unconditional, 17, 17);
 
     return 0;
 
@@ -497,7 +475,7 @@ FLAG odd_memread(struct VerificationModel* model)
     cpu_move_to_mar(cpu, 6, 7);
     mem_read_word(cpu, memory, 1, 1);
 
-    cpu->microPC = 18;
+    cpu_update_UPC(cpu, Unconditional, 18, 18);
 
     return 0;
 }
@@ -510,7 +488,7 @@ FLAG odd_move_rb10(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRE, 10, 0, 0, 0);
 
-    cpu->microPC = 19;
+    cpu_update_UPC(cpu, Unconditional, 19, 19);
 
     return 0;
 }
@@ -523,7 +501,7 @@ FLAG odd_move_p(struct VerificationModel* model)
 
     cpu_byte_ident(cpu, MDRO, 11, 0, 0, 0);
     
-    cpu->microPC = 20;
+    cpu_update_UPC(cpu, Unconditional, 20, 20);
 
     return 0;
 }
@@ -536,7 +514,7 @@ FLAG odd_set_pf(struct VerificationModel* model)
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu->microPC = 23;
+    cpu_update_UPC(cpu, Unconditional, 23, 23);
 
     return 0;
 }
