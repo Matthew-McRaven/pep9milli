@@ -1174,8 +1174,6 @@ FLAG sfx1_o_add_rb18(struct VerificationModel* model)
     WORD sfx_address = sp_val + os_val;
     WORD lookup1 = (WORD)(memory->memory[sfx_address]) << 8 | memory->memory[(WORD)(sfx_address + 1)];
     lookup1 += x_val;
-    klee_assert(cpu->MDRE == memory->memory[sfx_address]);
-    klee_assert(cpu->MDRO == memory->memory[(WORD)(sfx_address+1)]);
     klee_assert(rw18_val == lookup1);
     
     return cpu_update_UPC(cpu, Unconditional, 44, 44);
