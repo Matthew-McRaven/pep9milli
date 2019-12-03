@@ -112,6 +112,18 @@ FLAG sx_shift(struct VerificationModel* model);
 FLAG sf_mode(struct VerificationModel* model);
 FLAG sf_shift(struct VerificationModel* model);
 
+//Stack deFerred indeXed addressing
+FLAG sfx_mode(struct VerificationModel* model);
+FLAG sfx_det_odd(struct VerificationModel* model);
+FLAG sfx1_e(struct VerificationModel* model);
+FLAG sfx1_e_add_rb19(struct VerificationModel* model);
+FLAG sfx1_e_add_rb18(struct VerificationModel* model);
+FLAG sfx1_o(struct VerificationModel* model);
+FLAG sfx1_o_next_addr(struct VerificationModel* model);
+FLAG sfx1_o_memread2(struct VerificationModel* model);
+FLAG sfx1_o_add_rb19(struct VerificationModel* model);
+FLAG sfx1_o_add_rb18(struct VerificationModel* model);
+
 static MicrocodeLine microcodeTable[] = 
 {
     determine_even_odd,     //00
@@ -168,6 +180,16 @@ static MicrocodeLine microcodeTable[] =
     sx_shift,               //51
     sf_mode,                //52
     sf_shift,               //53
+    sfx_mode,               //54
+    sfx_det_odd,            //55
+    sfx1_e,                 //56
+    sfx1_e_add_rb19,        //57
+    sfx1_e_add_rb18,        //58
+    sfx1_o,                 //59
+    sfx1_o_next_addr,       //60
+    sfx1_o_memread2,        //61
+    sfx1_o_add_rb19,        //62
+    sfx1_o_add_rb18,        //63
 };
 
 WORD starting_PC;
@@ -209,6 +231,7 @@ void init_model(struct VerificationModel *model)
         else if(instr_addr_mode[it] == x_addr){cpu->addressing_mode_decoder[it] = 47;}
         else if(instr_addr_mode[it] == sx_addr){cpu->addressing_mode_decoder[it] = 49;}
         else if(instr_addr_mode[it] == sf_addr){cpu->addressing_mode_decoder[it] = 52;}
+        else if(instr_addr_mode[it] == sfx_addr){cpu->addressing_mode_decoder[it] = 54;}
         else{cpu->addressing_mode_decoder[it] = 21;}
     }
 
@@ -216,7 +239,7 @@ void init_model(struct VerificationModel *model)
     // Create state variables to compare against at the end of execution.
     klee_make_symbolic(&starting_PC, sizeof(starting_PC), "Starting PC");
     klee_make_symbolic(&IS_Value, sizeof(IS_Value), "IS Value");
-    //IS_Value = 80 + 4;
+    //IS_Value = 80 + 7;
     // Initialize constant registers 22-31.
     init_static_regs(model->cpu);
 
@@ -331,6 +354,19 @@ FLAG test_model(struct VerificationModel *model)
             klee_assert(cpu->regBank.registers[20] == memory->memory[sf2_address]);
             klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(sf2_address + 1)]);
         } 
+        else if(mode == sfx_addr) {
+            WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+            WORD x_val = (WORD)(((WORD)cpu->regBank.registers[2]) << 8) | cpu->regBank.registers[3];
+            WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+            WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+            WORD sfx_address = sp_val + os_val;
+            WORD sfx1_val = (WORD)(memory->memory[sfx_address]) << 8 | memory->memory[(WORD)(sfx_address + 1)];
+            sfx1_val += x_val;
+            klee_assert(rw18_val == sfx1_val);
+
+            klee_assert(cpu->regBank.registers[20] == memory->memory[rw18_val]);
+            klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(rw18_val + 1)]);
+        }
     }
     return 1;
 }
@@ -531,11 +567,7 @@ FLAG odd_opr(struct VerificationModel* model)
     WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
      // Assert that address is odd.
     klee_assert(address % 2 == 1);
-    klee_assert(memory->memory[address] == cpu->regBank.registers[11]);
     cpu_byte_ident(cpu, 11, 9, 0, 0, 0);
-    klee_assert(memory->memory[address] == cpu->regBank.registers[9]);
-    klee_assert(address == (WORD)(starting_PC + 1));
-    klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
 
     return cpu_update_UPC(cpu, Unconditional, 16, 16);
 }
@@ -974,4 +1006,177 @@ FLAG sf_shift(struct VerificationModel* model)
     cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, BRS, 39, 36);
+}
+
+//Stack deFerred indeXed addressing
+FLAG sfx_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to SP.
+    cpu_byte_add_nocarry(cpu, 10, 5, 19, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 9, 4, 18, S, 0, 0, 0, 0, 0, 0);
+    
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    klee_assert(rw18_val == sfx_address);
+
+    return cpu_update_UPC(cpu, Unconditional, 55, 55);
+}
+
+FLAG sfx_det_odd(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, BRS, 59, 56);
+}
+FLAG sfx1_e(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 1, 1);
+
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    klee_assert(rw18_val == sfx_address);
+    klee_assert(cpu->MDRE == memory->memory[sfx_address]);
+    klee_assert(cpu->MDRO == memory->memory[(WORD)(sfx_address+1)]);
+
+    return cpu_update_UPC(cpu, Unconditional, 57, 57);
+}
+FLAG sfx1_e_add_rb19(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to X.
+    cpu_byte_add_nocarry(cpu, MDRO, 3, 19, 0, 0, 0, 0, 0, 1);
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD sfx_address = sp_val + os_val;
+    klee_assert(cpu->MDRE == memory->memory[sfx_address]);
+    klee_assert(cpu->MDRO == memory->memory[(WORD)(sfx_address+1)]);
+    
+    return cpu_update_UPC(cpu, Unconditional, 58, 58);
+}
+
+FLAG sfx1_e_add_rb18(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to X.
+    cpu_byte_add_carry(cpu, MDRE, 2, 18, S, 0, 0, 0, 0, 0, 0);
+    WORD x_val = (WORD)(((WORD)cpu->regBank.registers[2]) << 8) | cpu->regBank.registers[3];
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    WORD lookup1 = (WORD)(memory->memory[sfx_address]) << 8 | memory->memory[(WORD)(sfx_address + 1)];
+    lookup1 += x_val;
+    klee_assert(cpu->MDRE == memory->memory[sfx_address]);
+    klee_assert(cpu->MDRO == memory->memory[(WORD)(sfx_address+1)]);
+    klee_assert(rw18_val == lookup1);
+
+    return cpu_update_UPC(cpu, Unconditional, 44, 44);
+}
+
+FLAG sfx1_o(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 18, 19);
+    mem_read_word(cpu, memory, 0, 1);
+
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    klee_assert(rw18_val == sfx_address);
+    klee_assert(cpu->MDRO == memory->memory[sfx_address]);
+
+    return cpu_update_UPC(cpu, Unconditional, 60, 60);
+}
+
+FLAG sfx1_o_next_addr(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to SP.
+    cpu_byte_add_nocarry(cpu, 19, 23, 17, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 18, 22, 16, S, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 61, 61);
+}
+
+FLAG sfx1_o_memread2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    cpu_move_to_mar(cpu, 16, 17);
+    mem_read_word(cpu, memory, 1, 0);
+
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    klee_assert(rw18_val == sfx_address);
+    klee_assert(cpu->MDRO == memory->memory[sfx_address]);
+    klee_assert(cpu->MDRE == memory->memory[(WORD)(sfx_address+1)]);
+
+    return cpu_update_UPC(cpu, Unconditional, 62, 62);
+}
+
+FLAG sfx1_o_add_rb19(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to X.
+    cpu_byte_add_nocarry(cpu, MDRE, 3, 19, 0, 0, 0, 0, 0, 1);
+    
+    return cpu_update_UPC(cpu, Unconditional, 63, 63);
+}
+FLAG sfx1_o_add_rb18(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory; 
+
+    // Add OS to X.
+    cpu_byte_add_carry(cpu, MDRO, 2, 18, S, 0, 0, 0, 0, 0, 0);
+    WORD x_val = (WORD)(((WORD)cpu->regBank.registers[2]) << 8) | cpu->regBank.registers[3];
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19]; 
+    WORD sfx_address = sp_val + os_val;
+    WORD lookup1 = (WORD)(memory->memory[sfx_address]) << 8 | memory->memory[(WORD)(sfx_address + 1)];
+    lookup1 += x_val;
+    klee_assert(cpu->MDRE == memory->memory[sfx_address]);
+    klee_assert(cpu->MDRO == memory->memory[(WORD)(sfx_address+1)]);
+    klee_assert(rw18_val == lookup1);
+    
+    return cpu_update_UPC(cpu, Unconditional, 44, 44);
 }

@@ -34,7 +34,7 @@ d_e_mode:   MemRead(RW18, 1, 1)
 d_o_mode:   MemRead(RW18, 0, 1)
             RB20:= ident(MDRO)
             RW16:= add(RW18, one)
-            MemRead(RW16,1,0)
+            MemRead(RW16, 1, 0)
             RB21:= ident(MDRE); goto execute
 n_mode:     RW18:= ident(RW9)
             asr(RB19); S; if S goto n1_o_mode else n1_e_mode
@@ -44,9 +44,9 @@ n1_e_mode:  MemRead(RW18, 1, 1)
 n1_o_mode:  MemRead(RW18, 0, 1)
             RW16:= add(RW18, one)
             RB18:= ident(MDRO)
-            MemRead(RW16,1,0)
+            MemRead(RW16, 1, 0)
             RB19:= ident(MDRE); goto n2_mode
-n2_mode:    asr(RB21); S; if S goto d_o_mode else d_e_mode
+n2_mode:    asr(RB19); S; if S goto d_o_mode else d_e_mode
 s_mode:     RW18:= add(RW9, RW4)
             asr(RB19); S; if S goto d_o_mode else d_e_mode
 sf_mode:    RW18:= add(RW9, RW4)
@@ -56,5 +56,14 @@ x_mode:     RW18:= add(RW9, RW2)
 sx_mode:    RW18:= add(RW9, RW2)
             RW18:= add(RW18, RW4)
             asr(RB19); S; if S goto d_o_mode else d_e_mode
-sfx_mode:   STOP() // Ignore this address mode for now since it is a pain
+sfx_mode:   RW18:= add(RW9, RW4)
+            asr(RB19); S; if S goto sfx1_o else sfx1_e
+sfx1_e:     MemRead(RW18, 1, 1)
+            RB19:= add(MDRO, RB3, RB19); S
+            RB18:= add_c(MDRE, RB2, RB18, S); goto n2_mode
+sfx1_o:     MemRead(RW18, 0, 1)
+            RW16:= add(RW18, one)
+            MemRead(RW16, 1, 0)
+            RB19:= add(MDRE, RB3); S
+            RB18:= add_c(MDRO, RB2, S); goto n2_mode
 execute:    STOP()
