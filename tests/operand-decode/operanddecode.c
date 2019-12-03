@@ -108,6 +108,10 @@ FLAG sx_mode(struct VerificationModel* model);
 FLAG sx_add(struct VerificationModel* model);
 FLAG sx_shift(struct VerificationModel* model);
 
+//Stack deFerred addressing
+FLAG sf_mode(struct VerificationModel* model);
+FLAG sf_shift(struct VerificationModel* model);
+
 static MicrocodeLine microcodeTable[] = 
 {
     determine_even_odd,     //00
@@ -162,6 +166,8 @@ static MicrocodeLine microcodeTable[] =
     sx_mode,                //49
     sx_add,                 //50
     sx_shift,               //51
+    sf_mode,                //52
+    sf_shift,               //53
 };
 
 WORD starting_PC;
@@ -191,7 +197,7 @@ void init_model(struct VerificationModel *model)
         cpu->is_unary_decoder[it + 6] = 0; cpu->is_unary_decoder[it + 7] = 0;
         instr_addr_mode[it    ] = i_addr;  instr_addr_mode[it + 1] = d_addr;
         instr_addr_mode[it + 2] = n_addr;  instr_addr_mode[it + 3] = s_addr;
-        instr_addr_mode[it + 4] = sf_addr; instr_addr_mode[it + 4] = x_addr;
+        instr_addr_mode[it + 4] = sf_addr; instr_addr_mode[it + 5] = x_addr;
         instr_addr_mode[it + 6] = sx_addr; instr_addr_mode[it + 7] = sfx_addr;
     }
 
@@ -202,13 +208,15 @@ void init_model(struct VerificationModel *model)
         else if(instr_addr_mode[it] == s_addr){cpu->addressing_mode_decoder[it] = 45;}
         else if(instr_addr_mode[it] == x_addr){cpu->addressing_mode_decoder[it] = 47;}
         else if(instr_addr_mode[it] == sx_addr){cpu->addressing_mode_decoder[it] = 49;}
-        else{cpu->addressing_mode_decoder[it] = 24;}
+        else if(instr_addr_mode[it] == sf_addr){cpu->addressing_mode_decoder[it] = 52;}
+        else{cpu->addressing_mode_decoder[it] = 21;}
     }
+
 
     // Create state variables to compare against at the end of execution.
     klee_make_symbolic(&starting_PC, sizeof(starting_PC), "Starting PC");
     klee_make_symbolic(&IS_Value, sizeof(IS_Value), "IS Value");
-
+    //IS_Value = 80 + 4;
     // Initialize constant registers 22-31.
     init_static_regs(model->cpu);
 
@@ -225,12 +233,10 @@ void init_model(struct VerificationModel *model)
 
     // We may now assume that the address has the correct value loaded.
     klee_assert(memory->memory[starting_PC] == IS_Value);
-
     // If our prefetch is valid, then initialize prefetch correctly.
     if(cpu->PSNVCbits[P]) {
         cpu->regBank.registers[11] = IS_Value;
     }
-
     //addressing_mode_decoder[255] = 23;
 
 }
@@ -264,7 +270,6 @@ FLAG test_model(struct VerificationModel *model)
         
         // RW20 == Operand Specifier
         enum AddressingModes mode = instr_addr_mode[cpu->regBank.registers[8]];
-        //klee_assert(mode == n_addr);
         if(mode == i_addr) {
             klee_assert(cpu->regBank.registers[9]  == cpu->regBank.registers[20]);
             klee_assert(cpu->regBank.registers[10] == cpu->regBank.registers[21]);
@@ -315,6 +320,17 @@ FLAG test_model(struct VerificationModel *model)
             klee_assert(cpu->regBank.registers[20] == memory->memory[s_address]);
             klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(s_address + 1)]);
         }
+        else if(mode == sf_addr) {
+            WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+            WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+            WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19];
+            WORD sf_address = sp_val + os_val;
+            klee_assert(cpu->regBank.registers[18] == memory->memory[sf_address]);
+            klee_assert(cpu->regBank.registers[19] == memory->memory[(WORD)(sf_address + 1)]);
+            WORD sf2_address = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19];
+            klee_assert(cpu->regBank.registers[20] == memory->memory[sf2_address]);
+            klee_assert(cpu->regBank.registers[21] == memory->memory[(WORD)(sf2_address + 1)]);
+        } 
     }
     return 1;
 }
@@ -910,7 +926,7 @@ FLAG sx_mode(struct VerificationModel* model)
 }
 FLAG sx_add(struct VerificationModel* model)
 {
-      // Cache pointer to cpu to save repeated pointer lookups.
+    // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
     // Add X to RW18.
@@ -928,4 +944,34 @@ FLAG sx_shift(struct VerificationModel* model)
     cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, BRS, 29, 26);
+}
+
+//Stack deFerred addressing
+FLAG sf_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    struct MainMemory* memory = model->main_memory;
+
+    // Add SP to RW18.
+    cpu_byte_add_nocarry(cpu, 10, 5, 19, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 9, 4, 18, S, 0, 0, 0, 0, 0, 0);
+    
+    WORD sp_val = (WORD)(((WORD)cpu->regBank.registers[4]) << 8) | cpu->regBank.registers[5];
+    WORD os_val = (WORD)(((WORD)cpu->regBank.registers[9]) << 8) | cpu->regBank.registers[10];
+    WORD rw18_val = (WORD)(((WORD)cpu->regBank.registers[18]) << 8) | cpu->regBank.registers[19];
+    WORD sf_address = sp_val + os_val;
+    klee_assert(rw18_val == sf_address);
+
+    return cpu_update_UPC(cpu, Unconditional, 53, 53);  
+}
+
+FLAG sf_shift(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_asr(cpu, 19, NONE, 0, 0, 0, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, BRS, 39, 36);
 }
