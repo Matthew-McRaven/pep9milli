@@ -12,8 +12,8 @@ build : $(objects)
 	$(MAKE) -C ../../simmain
 
 # Successive fibonnaci numbers in memory.
-$(LOCALDIR)/sim.bc: operanddecode ../../simmain/sim.h
-	clang-6.0 -I ../../simmain -fPIC -g -c -emit-llvm operanddecode -o $(LOCALDIR)/sim.bc
+$(LOCALDIR)/sim.bc: operanddecode.c ../../simmain/sim.h
+	clang-6.0 -I ../../simmain -fPIC -g -c -emit-llvm operanddecode.c -o $(LOCALDIR)/sim.bc
 
 $(LOCALDIR)/%.bc: %.c;
 	clang-6.0 -fPIC -g -c -emit-llvm $^ -o $@

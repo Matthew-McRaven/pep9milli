@@ -62,7 +62,27 @@ FLAG odd_move_p(struct VerificationModel* model);
 FLAG odd_set_pf(struct VerificationModel* model);
 
 // Halt execution
-FLAG end(struct VerificationModel* model);
+FLAG execute(struct VerificationModel* model);
+
+// Begin decoding operand.
+FLAG opr_decode(struct VerificationModel* model);
+
+// Immediate Addressing.
+FLAG i_mode(struct VerificationModel* model);
+
+//Direct Addressing
+FLAG d_mode(struct VerificationModel* model);
+FLAG d_det_odd(struct VerificationModel* model);
+FLAG d_e_mode(struct VerificationModel* model);
+FLAG d_e_move_rb20(struct VerificationModel* model);
+FLAG d_e_move_rb21(struct VerificationModel* model);
+FLAG d_o_mode(struct VerificationModel* model);
+FLAG d_o_move_rb20(struct VerificationModel* model);
+FLAG d_o_next_addr(struct VerificationModel* model);
+FLAG d_o_memread2(struct VerificationModel* model);
+FLAG d_o_move_rb21(struct VerificationModel* model);
+
+
 
 static MicrocodeLine microcodeTable[] = 
 {
@@ -87,7 +107,19 @@ static MicrocodeLine microcodeTable[] =
     odd_move_rb10,          //18
     odd_move_p,             //29
     odd_set_pf,             //20
-    end,                    //21
+    execute,                //21
+    opr_decode,             //22
+    i_mode,                 //23
+    d_mode,                 //24
+    d_det_odd,              //25
+    d_e_mode,               //26
+    d_e_move_rb20,          //27
+    d_e_move_rb21,          //28
+    d_o_mode,               //29
+    d_o_move_rb20,          //30
+    d_o_next_addr,          //31
+    d_o_memread2,           //32
+    d_o_move_rb21,          //33
 };
 
 WORD starting_PC;
@@ -124,13 +156,22 @@ void init_model(struct VerificationModel *model)
     if(cpu->PSNVCbits[P]) {
         cpu->regBank.registers[11] = IS_Value;
     }
+
     // Default assume all instructions are unary.
-    memset(is_unary_decoder, 0, 256);
+    memset(cpu->is_unary_decoder, 0, 256);
     // Instructions from 0 to 17 are unary.
     // Instructions from 18-37 are non-unary.
-    for(int it=18; it <= 37; it++) is_unary_decoder[it] = 1;
+    for(int it=18; it <= 37; it++) cpu->is_unary_decoder[it] = 1;
     // Instructions from 38 to 79 are unary.
-    for(int it=80; it <= 255; it++) is_unary_decoder[it] = 1;
+    for(int it=80; it <= 255; it++) cpu->is_unary_decoder[it] = 1;
+
+    // Initialize addressing mode decoder.
+    memset(instr_addr_mode, i_addr, 256);
+    for(int it=0; it<=255; it++) {
+        if(instr_addr_mode[it] == i_addr) cpu->addressing_mode_decoder[it] = 23;
+        else cpu->addressing_mode_decoder[it] = 23;
+    }
+    //addressing_mode_decoder[255] = 23;
 
 }
 
@@ -145,7 +186,7 @@ FLAG test_model(struct VerificationModel *model)
 
     // Assert that the instruction specifier was loaded.
     klee_assert(cpu->regBank.registers[8] == IS_Value);
-    if(is_unary_decoder[cpu->regBank.registers[8]]) {
+    if(cpu->is_unary_decoder[cpu->regBank.registers[8]]) {
         // Assert that program counter was incremented correctly.
         // Must use (WORD), otherwise WORD will widen to int32_t, causing evaluation errors.
         klee_assert((WORD)final_address == (WORD)(starting_PC + 1));
@@ -160,6 +201,14 @@ FLAG test_model(struct VerificationModel *model)
         klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
         klee_assert(cpu->regBank.registers[10] == memory->memory[(WORD)(starting_PC + 2)]); 
         klee_assert(!(starting_PC % 2 == 0) | (cpu->PSNVCbits[P] && cpu->regBank.registers[11] == memory->memory[(WORD)(starting_PC + 3)]));
+        
+        // RW20 == Operand Specifier
+        if(instr_addr_mode[cpu->regBank.registers[8]] == i_addr) {
+            klee_assert(cpu->regBank.registers[9]  == cpu->regBank.registers[20]);
+            klee_assert(cpu->regBank.registers[10] == cpu->regBank.registers[21]);
+        } else if(0) {
+
+        }
     }
     return 1;
 }
@@ -315,13 +364,7 @@ FLAG decode_un(struct VerificationModel* model)
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
     // If unary, go to STOP().
-    if(is_unary_decoder[cpu->regBank.registers[8]]) {
-        cpu->microPC = 21;
-    }
-    // Otherwise load operand.
-    else {
-        cpu->microPC = 10;
-    }
+    cpu_update_UPC(cpu, IsUnary, 21, 10);
 
     return 0;
 }
@@ -403,7 +446,7 @@ FLAG even_incr_PC2(struct VerificationModel* model)
     cpu_byte_add_nocarry(cpu, 7, 24, 7, 0, 0, 0, 0, 0, 1);
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
-    cpu->microPC = 21;
+    cpu->microPC = 23;
 
     return 0;
 }
@@ -488,20 +531,59 @@ FLAG odd_move_p(struct VerificationModel* model)
 // Set the prefetch valid bit to true.
 FLAG odd_set_pf(struct VerificationModel* model)
 {
-        // Cache pointer to cpu to save repeated pointer lookups.
+    // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
     cpu_set_prefetch_flag(cpu, 1);
 
-    cpu->microPC = 21;
+    cpu->microPC = 23;
 
     return 0;
 }
 
-FLAG end(struct VerificationModel *model)
+FLAG execute(struct VerificationModel *model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
     return cpu_update_UPC(cpu, Stop, 0, 0);
 }
+
+// Begin decoding operand.
+FLAG opr_decode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_update_UPC(cpu, AddressingModeDecoder, -1, -1);
+    //cpu->microPC = addressing_mode_decoder[cpu->regBank.registers[8]];
+
+    return 0;
+}
+
+// Immediate Addressing.
+FLAG i_mode(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Move operand specifier to RW20
+    cpu_byte_ident(cpu, 9, 20, 0, 0, 0);
+    cpu_byte_ident(cpu, 10, 21, 0, 0, 0);
+
+    cpu_update_UPC(cpu, Unconditional, 21, 21);
+
+    return 0;
+}
+
+//Direct Addressing
+FLAG d_mode(struct VerificationModel* model){return 0;}
+FLAG d_det_odd(struct VerificationModel* model){return 0;}
+FLAG d_e_mode(struct VerificationModel* model){return 0;}
+FLAG d_e_move_rb20(struct VerificationModel* model){return 0;}
+FLAG d_e_move_rb21(struct VerificationModel* model){return 0;}
+FLAG d_o_mode(struct VerificationModel* model){return 0;}
+FLAG d_o_move_rb20(struct VerificationModel* model){return 0;}
+FLAG d_o_next_addr(struct VerificationModel* model){return 0;}
+FLAG d_o_memread2(struct VerificationModel* model){return 0;}
+FLAG d_o_move_rb21(struct VerificationModel* model){return 0;}

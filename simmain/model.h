@@ -14,4 +14,15 @@ struct VerificationModel
 // Define a Microcode line as a function that acts on a verification model.
 typedef FLAG(*MicrocodeLine)(struct VerificationModel *);
 
+enum AddressingModes
+{
+    i_addr, d_addr, n_addr,
+    s_addr, sf_addr, x_addr,
+    sx_addr, sfx_addr,
+    NONE_ADDR
+};
+
+// Which addressing mode is associated with a particular instruction specifier
+enum AddressingModes instr_addr_mode[256];
+
 #endif

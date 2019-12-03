@@ -125,7 +125,7 @@ void init_model(struct VerificationModel *model)
         cpu->regBank.registers[11] = IS_Value;
     }
     // Default assume all instructions are unary.
-    memset(is_unary_decoder, 0, 256);
+    memset(cpu->is_unary_decoder, 0, 256);
     // Instructions from 0 to 17 are unary.
     // Instructions from 18-37 are non-unary.
     for(int it=18; it <= 37; it++) is_unary_decoder[it] = 1;
@@ -145,7 +145,7 @@ FLAG test_model(struct VerificationModel *model)
 
     // Assert that the instruction specifier was loaded.
     klee_assert(cpu->regBank.registers[8] == IS_Value);
-    if(is_unary_decoder[cpu->regBank.registers[8]]) {
+    if(cpu->is_unary_decoder[cpu->regBank.registers[8]]) {
         // Assert that program counter was incremented correctly.
         // Must use (WORD), otherwise WORD will widen to int32_t, causing evaluation errors.
         klee_assert((WORD)final_address == (WORD)(starting_PC + 1));
@@ -315,7 +315,7 @@ FLAG decode_un(struct VerificationModel* model)
     cpu_byte_add_carry(cpu, 6, 22, 6, S, 0, 0, 0, 0, 0, 0);
 
     // If unary, go to STOP().
-    if(is_unary_decoder[cpu->regBank.registers[8]]) {
+    if(cpu->is_unary_decoder[cpu->regBank.registers[8]]) {
         cpu->microPC = 21;
     }
     // Otherwise load operand.

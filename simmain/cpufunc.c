@@ -102,7 +102,19 @@ FLAG cpu_update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget
             
             break;
         case IsUnary:
+            if(cpu->is_unary_decoder[cpu->regBank.registers[8]]) {
+                cpu->microPC = trueTarget;
+            }
+            else {
+                cpu->microPC = falseTarget;
+            }
+
+            break;
         case AddressingModeDecoder:
+        
+        cpu->microPC = cpu->addressing_mode_decoder[cpu->regBank.registers[8]];
+        break;
+
         case InstructionSpecifierDecoder:
             assert(0 && "Addressing mode undefined");
             break;

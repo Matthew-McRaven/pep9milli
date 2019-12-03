@@ -7,16 +7,54 @@ odd_fetch:  if PF goto PF_Valid else PF_Invalid
 PF_Valid:   IS  := ident(P) goto decode_un
 PF_Invalid: MemRead(PC, 1, 1)
             P   := ident(MDRO)
-decode_un:  PC  := add(PC, one); if IsUnary goto end else opr_fetch
+decode_un:  PC  := add(PC, one); if IsUnary goto execute else opr_fetch
 opr_fetch:  if PCEven goto even_opr else odd_opr
 even_opr:   MemRead(PC, 1, 1)
             RB9 := ident(MDRE)
             RB10:= ident(MDRE)
-            PC  := add(PC, two); goto end
+            PC  := add(PC, two); goto opr_decode
 odd_opr     RB9 := ident(RB11)
             PC  := add(PC, two)
             MemRead(PC, 1, 1)
             RB10:= ident(MDRE)
             P   := ident(MDRO)
-            PF  := 1; P; goto end
-end:        STOP()
+            PF  := 1; P; goto opr_decode
+
+opr_decode: DecodeAddrMode()
+// The following conventions are to be held:
+// At the end of the operand decoder, RW20 shall contain the decoded operand value.
+// RW18 shall contain the address for from which the decoded operand value was loaded.
+// For immediate addressing, RW18's value is undefined.
+i_mode:     RW20:= ident(RW9); goto execute
+d_mode:     RW18:= ident(RW9)
+            asr(RB19); S; if S goto d_o_mode else d_e_mode
+d_e_mode:   MemRead(RW18, 1, 1)
+            RB20:= ident(MDRE)
+            RB21:= ident(MDRO); goto execute
+d_o_mode:   MemRead(RW18, 0, 1)
+            RB20:= ident(MDRO)
+            RW16:= add(RW18, one)
+            MemRead(RW16,1,0)
+            RB21:= ident(MDRE); goto execute
+n_mode:     RW18:= ident(RW9)
+            asr(RB19); S; if S goto n1_o_mode else n1_e_mode
+n1_e_mode:  MemRead(RW18, 1, 1)
+            RB18:= ident(MDRE)
+            RB19:= ident(MDRO); goto n2_mode
+n1_o_mode:  MemRead(RW18, 0, 1)
+            RW16:= add(RW18, one)
+            RB18:= ident(MDRO)
+            MemRead(RW16,1,0)
+            RB19:= ident(MDRE); goto n2_mode
+n2_mode:    asr(RB21); S; if S goto d_o_mode else d_e_mode
+s_mode:     RW18:= add(RW9, RW4)
+            asr(RB19); S; if S goto d_o_mode else d_e_mode
+sf_mode:    RW18:= add(RW9, RW4)
+            asr(RB19); S; if S goto n1_o_mode else n1_e_mode
+x_mode:     RW18:= add(RW9, RW2)
+            asr(RB19); S; if S goto d_o_mode else d_e_mode
+sx_mode:    RW18:= add(RW9, RW2)
+            RW18:= add(RW18, RW4)
+            asr(RB19); S; if S goto d_o_mode else d_e_mode
+sfx_mode:   STOP() // Ignore this address mode for now since it is a pain
+execute:    STOP()

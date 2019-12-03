@@ -7,12 +7,10 @@
 #include "defs.h"
 #include "model.h"
 
-FLAG is_unary_decoder[256];
-
 // Initialize the CPU to contain sensible values for the verification run.
 // Apply any pre-conditions to the model.
 // Must also init tables (if used).
-// These tables include: is_unary_decoder.
+// These tables include: is_unary_decoder, addressing_mode_decoder.
 void init_model(struct VerificationModel *model);
 
 // Check any post-conditions on the CPU model, and log any
