@@ -78,7 +78,7 @@ enum Instructions instruction_array[256] =
     i_addx,    i_addx,    i_addx,    i_addx,    i_addx,    i_addx,    i_addx,    i_addx,      // 111
     i_suba,    i_suba,    i_suba,    i_suba,    i_suba,    i_suba,    i_suba,    i_suba,      // 119
     i_subx,    i_subx,    i_subx,    i_subx,    i_subx,    i_subx,    i_subx,    i_subx,      // 127
-    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,       // 135
+    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,    i_adda,      // 135
     i_andx,    i_andx,    i_andx,    i_andx,    i_andx,    i_andx,    i_andx,    i_andx,      // 143
     i_ora,     i_ora,     i_ora,     i_ora,     i_ora,     i_ora,     i_ora,     i_ora,       // 151
     i_orx,     i_orx,     i_orx,     i_orx,     i_orx,     i_orx,     i_orx,     i_orx,       // 159

@@ -116,6 +116,7 @@ FLAG cpu_update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget
         case InstructionSpecifierDecoder:
             cpu->microPC = cpu->instruction_execute_decoder[cpu->regBank.registers[8]];
             break;
+            
         case Stop:
             return 1;
             break;
@@ -650,18 +651,18 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
     else {
         arv = cpu->regBank.registers[arn];
     }
-    byte_flags(0);
     struct ALUByteResult result = byte_flags(arv);
     cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS); 
 }
 
 void cpu_read_flags(struct CPU* cpu, REGNUM crn)
 {
-    BYTE output;
-    output |= cpu->PSNVCbits[N] ? 1 << 3 : 0;
-    output |= cpu->PSNVCbits[Z] ? 1 << 2 : 0;
-    output |= cpu->PSNVCbits[V] ? 1 << 1 : 0;
-    output |= cpu->PSNVCbits[C] ? 1 << 0 : 0;
+    // Must initialize output, otherwise it will default to 255.
+    BYTE output = 0;
+    output |= cpu->PSNVCbits[N] != 0 ? 1 << 3 : 0;
+    output |= cpu->PSNVCbits[Z] != 0 ? 1 << 2 : 0;
+    output |= cpu->PSNVCbits[V] != 0 ? 1 << 1 : 0;
+    output |= cpu->PSNVCbits[C] != 0 ? 1 << 0 : 0;
     if(crn == MDRO) {
         cpu->MDRO = output;
     } 

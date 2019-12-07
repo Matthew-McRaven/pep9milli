@@ -1,0 +1,81 @@
+            DecodeInstruction()
+end:        goto i_stop
+// Unclassified Unary Instructions
+i_stop:     STOP()
+i_movspa:   RW0 := ident(RW4) ; goto end
+i_movflga:  RB1 := MOVFLGA(); goto end
+i_movaflga  FLAGS(RB1); NZVC; goto end
+// Unary no operation
+i_nop0:     goto end
+
+// Unary Logical Instructions
+i_nota:     RW0 := INVERT(RW0); NZA; goto end
+i_notx:     RW2 := INVERT(RW2); NZA; goto end
+
+i_nega:     RB1 := SUB  (RB22, RB1, RB1); SZ
+            RB0 := SUB_C(RB22, RB0, RB0, S); ANVZ; goto end
+i_negx:     RB3 := SUB  (RB22, RB3, RB3); SZ
+            RB2 := SUB_C(RB22, RB2, RB2, S); ANVZ; goto end
+            
+// Unary Shift & Rotate Instructions
+i_asla:     RB1 := ASL(RB1, RB1); ZS
+            RB0 := ROL(RB0, RB0, S); ANZVC; goto end
+i_aslx:     RB3 := ASL(RB3, RB3); ZS
+            RB2 := ROL(RB2, RB2, S); ANZVC; goto end
+            
+i_asra:     RB0 := ASR(RB1, RB1); SNZ
+            RB1 := ROR(RB0, RB0, S); ANZC; goto end
+i_asrx:     RB2 := ASR(RB3, RB3); SNZ
+            RB3 := ROR(RB2, RB2, S); ANZC; goto end
+            
+i_rola:     RB1 := ROL(RB1, RB1, C); S
+            RB0 := ROL(RB0, RB0, S); C; goto end
+i_rolx:     RB3 := ROL(RB3, RB3, C); S
+            RB2 := ROL(RB2, RB2, S); C; goto end
+            
+i_rora:     RB0 := ROR(RB1, RB1, C); S
+            RB1 := ROR(RB0, RB0, S); C; goto end
+i_rorx:     RB2 := ROR(RB3, RB3); S
+            RB3 := ROR(RB2, RB2, S, C); C; goto end
+
+// Non-Unary Branch Instructions
+i_br:       RW6 := ident(RW20)
+            PF  := 0; P; goto end
+i_brle:     if LE goto i_br else end
+i_brlt:     if LT goto i_br else end
+i_breq:     if EQ goto i_br else end
+i_brne:     if NE goto i_br else end
+i_brge:     if GE goto i_br else end
+i_brgt:     if GT goto i_br else end
+i_brv:      if V  goto i_br else end
+i_brc:      if C  goto i_br else end
+
+// Non-Unary Arithmetic Instruction
+            PF  := 0; P; goto end
+i_addsp     RW4 := add(RW4, RW20); goto end
+i_subsp     RW4 := sub(RW4, RW20); goto end
+i_adda      RW0 := add(RW0, RW20); NZVC; goto end
+i_addx      RW2 := add(RW2, RW20); NZVC; goto end
+i_suba      RW0 := add(RW0, RW20); NZVC; goto end
+i_subx      RW2 := add(RW2, RW20); NZVC; goto end
+
+// Non-Unary Logical Instructions
+i_anda      RW0 := and(RW0, RW20); NZ; goto end
+i_andx      RW2 := and(RW2, RW20); NZ; goto end
+i_ora       RW0 := or (RW0, RW20); NZ; goto end
+i_orx       RW2 := or (RW2, RW20); NZ; goto end
+
+// Non-Unary Comparison Instructions
+// TODO
+
+// Load Instructions
+// TODO
+
+// Store Instructions
+// TODO
+
+// Call & Return instructions
+// TOOD
+
+// Context Switching Instructions
+// TODO
