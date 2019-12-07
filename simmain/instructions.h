@@ -20,7 +20,7 @@ enum Instructions {
     i_rorx = 17,
     i_br = 18,
     i_brle = 20,
-    i_bglt = 22,
+    i_brlt = 22,
     i_breq = 24,
     i_brne = 26,
     i_brge = 28,
@@ -66,7 +66,7 @@ enum Instructions instruction_array[256] =
 {
     i_stop,    i_ret,     i_rettr,   i_movspa,  i_movflga, i_movaflg, i_nota,    i_notx,      // 7
     i_nega,    i_negx,    i_asla,    i_aslx,    i_asra,    i_asrx,    i_rola,    i_rolx,      // 15
-    i_rora,    i_rorx,    i_br,      i_br,      i_brle,    i_brle,    i_bglt,    i_bglt,      // 23
+    i_rora,    i_rorx,    i_br,      i_br,      i_brle,    i_brle,    i_brlt,    i_brlt,      // 23
     i_breq,    i_breq,    i_brne,    i_brne,    i_brge,    i_brge,    i_brgt,    i_brgt,      // 31
     i_brv,     i_brv,     i_brc,     i_brc,     i_call,    i_call,    i_nop0,    i_nop1,      // 39
     i_nop,     i_nop,     i_nop,     i_nop,     i_nop,     i_nop,     i_nop,     i_nop,       // 47

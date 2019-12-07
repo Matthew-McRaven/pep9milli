@@ -70,6 +70,20 @@ FLAG m_rora2(struct VerificationModel* model);
 FLAG m_rorx1(struct VerificationModel* model);
 FLAG m_rorx2(struct VerificationModel* model);
 
+// Branch instructions.
+// BR
+FLAG m_br1(struct VerificationModel* model);
+FLAG m_br2(struct VerificationModel* model);
+
+FLAG m_brle(struct VerificationModel* model);
+FLAG m_brlt(struct VerificationModel* model);
+FLAG m_breq(struct VerificationModel* model);
+FLAG m_brne(struct VerificationModel* model);
+FLAG m_brge(struct VerificationModel* model);
+FLAG m_brgt(struct VerificationModel* model);
+FLAG m_brv(struct VerificationModel* model);
+FLAG m_brc(struct VerificationModel* model);
+
 static MicrocodeLine microcodeTable[] = 
 {
     determine_instruction,      //00
@@ -99,6 +113,16 @@ static MicrocodeLine microcodeTable[] =
     m_rora2,                    //24
     m_rorx1,                    //25
     m_rorx2,                    //26
+    m_br1,                      //27
+    m_br2,                      //28
+    m_brle,                     //29
+    m_brlt,                     //30
+    m_breq,                     //31
+    m_brne,                     //32
+    m_brge,                     //33
+    m_brgt,                     //34
+    m_brv,                      //35
+    m_brc,                      //36
 
 };
 
@@ -151,6 +175,15 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_rolx){cpu->instruction_execute_decoder[it] = 21;}
         else if(instruction_array[it] == i_rora){cpu->instruction_execute_decoder[it] = 23;}
         else if(instruction_array[it] == i_rorx){cpu->instruction_execute_decoder[it] = 25;}
+        else if(instruction_array[it] == i_br){cpu->instruction_execute_decoder[it] = 27;}
+        else if(instruction_array[it] == i_brle){cpu->instruction_execute_decoder[it] = 29;}
+        else if(instruction_array[it] == i_brlt){cpu->instruction_execute_decoder[it] = 30;}
+        else if(instruction_array[it] == i_breq){cpu->instruction_execute_decoder[it] = 31;}
+        else if(instruction_array[it] == i_brne){cpu->instruction_execute_decoder[it] = 32;}
+        else if(instruction_array[it] == i_brge){cpu->instruction_execute_decoder[it] = 33;}
+        else if(instruction_array[it] == i_brgt){cpu->instruction_execute_decoder[it] = 34;}
+        else if(instruction_array[it] == i_brv){cpu->instruction_execute_decoder[it] = 35;}
+        else if(instruction_array[it] == i_brc){cpu->instruction_execute_decoder[it] = 36;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -322,6 +355,42 @@ FLAG test_model(struct VerificationModel *model)
         == cpu_get_pair(cpu, 2 , 3));
         // Carry out if starting lowest order bit is 1.
         klee_assert((starting_cpu.regBank.registers[3] & 0x1 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        break;
+    case i_br:
+        klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21));
+        klee_assert(cpu->PSNVCbits[P] == 0);
+        break;
+    case i_brle:
+        if(cpu->PSNVCbits[N] || cpu->PSNVCbits[Z]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brlt:
+        if(cpu->PSNVCbits[N]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_breq:
+        if(cpu->PSNVCbits[Z]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brne:
+        if(!cpu->PSNVCbits[Z]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brge:
+        if(!cpu->PSNVCbits[N]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brgt:
+        if(!cpu->PSNVCbits[N] && !cpu->PSNVCbits[Z]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brv:
+        if(cpu->PSNVCbits[V])klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else { klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7)); }
+        break;
+    case i_brc:
+        if(cpu->PSNVCbits[C]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
+        else klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7));
         break;
     default:
         break;
@@ -609,11 +678,98 @@ FLAG m_rorx1(struct VerificationModel* model)
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
-FLAG m_rorx2(struct VerificationModel* model){
+FLAG m_rorx2(struct VerificationModel* model)
+{
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
     cpu_byte_ror(cpu, 3, 3, S, 0, 0, 0, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// Branch instructions.
+// BR
+FLAG m_br1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, 20, 6, 0, 0, 0);
+    cpu_byte_ident(cpu, 21, 7, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+
+FLAG m_br2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_set_prefetch_flag(cpu, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+FLAG m_brle(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRLE, 27, 1); 
+}
+FLAG m_brlt(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRLT, 27, 1); 
+}
+
+FLAG m_breq(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BREQ, 27, 1); 
+}
+
+FLAG m_brne(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRNE, 27, 1); 
+}
+
+FLAG m_brge(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRGE, 27, 1); 
+}
+
+FLAG m_brgt(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRGT, 27, 1); 
+}
+
+FLAG m_brv(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRV, 27, 1); 
+}
+
+FLAG m_brc(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, BRC, 27, 1); 
 }

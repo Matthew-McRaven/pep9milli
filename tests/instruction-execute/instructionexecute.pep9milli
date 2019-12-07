@@ -51,7 +51,6 @@ i_brv:      if V  goto i_br else end
 i_brc:      if C  goto i_br else end
 
 // Non-Unary Arithmetic Instruction
-            PF  := 0; P; goto end
 i_addsp     RW4 := add(RW4, RW20); goto end
 i_subsp     RW4 := sub(RW4, RW20); goto end
 i_adda      RW0 := add(RW0, RW20); NZVC; goto end
