@@ -147,6 +147,8 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_aslx){cpu->instruction_execute_decoder[it] = 13;}
         else if(instruction_array[it] == i_asra){cpu->instruction_execute_decoder[it] = 15;}
         else if(instruction_array[it] == i_asrx){cpu->instruction_execute_decoder[it] = 17;}
+        else if(instruction_array[it] == i_rola){cpu->instruction_execute_decoder[it] = 19;}
+        else if(instruction_array[it] == i_rolx){cpu->instruction_execute_decoder[it] = 21;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -158,6 +160,9 @@ void init_model(struct VerificationModel *model)
     // Copy starting registers to current registers
     for(int it=0; it<=31; it++) {
         cpu->regBank.registers[it] = starting_cpu.regBank.registers[it];
+    }
+    for(int it=0; it <= sizeof(cpu->PSNVCbits); it++) {
+        cpu->PSNVCbits[it] = starting_cpu.PSNVCbits[it];
     }
     // TODO: Copy over other CPU fields
 }
@@ -286,7 +291,20 @@ FLAG test_model(struct VerificationModel *model)
         // If X is 0, then Z should be 1, else 0.
         klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));
         break;
-
+    case i_rola:
+        // Shift the starting accumulator right by one, and set the low order bit to the carry.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 0, 1) << 1) | (starting_cpu.PSNVCbits[C] ? 1 : 0)) 
+        == cpu_get_pair(cpu, 0 , 1));
+        // If the starting A value has a high order 1 bit, then there was a carry out.
+        klee_assert((starting_cpu.regBank.registers[0] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[C] ? 1 : 0));
+        break;
+    case i_rolx:
+            // Shift the starting accumulator right by one, and set the low order bit to the carry.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 2, 3) << 1) | (starting_cpu.PSNVCbits[C] ? 1 : 0)) 
+        == cpu_get_pair(cpu, 2 , 3));
+        // If the starting X value has a high order 1 bit, then there was a carry out.
+        klee_assert((starting_cpu.regBank.registers[2] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[C] ? 1 : 0));
+        break;
     default:
         break;
     }
@@ -508,7 +526,7 @@ FLAG m_rola1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_rol(cpu, 1, 1, C, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
@@ -516,6 +534,8 @@ FLAG m_rola2(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_rol(cpu, 0, 0, S, 0, 0, 0, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
@@ -526,7 +546,7 @@ FLAG m_rolx1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_rol(cpu, 3, 3, C, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
@@ -534,6 +554,8 @@ FLAG m_rolx2(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_rol(cpu, 2, 2, S, 0, 0, 0, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }

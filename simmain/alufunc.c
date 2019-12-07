@@ -97,7 +97,7 @@ struct ALUByteResult byte_asr(BYTE a)
 struct ALUByteResult byte_rol(BYTE a, FLAG carryIn)
 {
     struct ALUByteResult result;
-    result.result = a << 1 | (carryIn ? 1 : 0);
+    result.result = a << 1 | (carryIn != 0 ? 1 : 0);
     result.NZVC[N] = result.result & 0x80 ? 1 : 0;
     result.NZVC[Z] = result.result == 0 ? 1 : 0; 
      // Signed overflow if a<hi> doesn't match a<hi-1>
