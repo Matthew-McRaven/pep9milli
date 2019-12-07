@@ -177,8 +177,6 @@ FLAG determine_even_odd(struct VerificationModel* model)
 
     cpu_byte_asr(cpu, 7, NONE, 0, 0, 0, 0, 0, 1);
 
-    WORD address = (WORD)(((WORD)cpu->regBank.registers[6]) << 8) | cpu->regBank.registers[7];
-
     return cpu_update_UPC(cpu, BRS, 5, 1);
 }
 
