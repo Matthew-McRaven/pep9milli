@@ -23,20 +23,20 @@ i_asla:     RB1 := ASL(RB1, RB1); ZS
 i_aslx:     RB3 := ASL(RB3, RB3); ZS
             RB2 := ROL(RB2, RB2, S); ANZVC; goto end
             
-i_asra:     RB0 := ASR(RB1, RB1); SNZ
-            RB1 := ROR(RB0, RB0, S); ANZC; goto end
-i_asrx:     RB2 := ASR(RB3, RB3); SNZ
-            RB3 := ROR(RB2, RB2, S); ANZC; goto end
+i_asra:     RB0 := ASR(RB0, RB0); SNZ
+            RB1 := ROR(RB1, RB1, S); ANZC; goto end
+i_asrx:     RB2 := ASR(RB2, RB2); SNZ
+            RB3 := ROR(RB3, RB3, S); ANZC; goto end
             
 i_rola:     RB1 := ROL(RB1, RB1, C); S
             RB0 := ROL(RB0, RB0, S); C; goto end
 i_rolx:     RB3 := ROL(RB3, RB3, C); S
             RB2 := ROL(RB2, RB2, S); C; goto end
             
-i_rora:     RB0 := ROR(RB1, RB1, C); S
-            RB1 := ROR(RB0, RB0, S); C; goto end
-i_rorx:     RB2 := ROR(RB3, RB3); S
-            RB3 := ROR(RB2, RB2, S, C); C; goto end
+i_rora:     RB0 := ROR(RB0, RB0, C); S
+            RB1 := ROR(RB1, RB1, S); C; goto end
+i_rorx:     RB2 := ROR(RB2, RB2); S
+            RB3 := ROR(RB3, RB3, S, C); C; goto end
 
 // Non-Unary Branch Instructions
 i_br:       RW6 := ident(RW20)

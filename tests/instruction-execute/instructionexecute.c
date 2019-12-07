@@ -145,6 +145,8 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_nop0){cpu->instruction_execute_decoder[it] = 10;}
         else if(instruction_array[it] == i_asla){cpu->instruction_execute_decoder[it] = 11;}
         else if(instruction_array[it] == i_aslx){cpu->instruction_execute_decoder[it] = 13;}
+        else if(instruction_array[it] == i_asra){cpu->instruction_execute_decoder[it] = 15;}
+        else if(instruction_array[it] == i_asrx){cpu->instruction_execute_decoder[it] = 17;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -251,7 +253,40 @@ FLAG test_model(struct VerificationModel *model)
         break;
     case i_aslx:
         klee_assert((WORD)(cpu_get_pair(&starting_cpu, 2, 3) << 1) == cpu_get_pair(cpu, 2, 3));
+        // If the starting X value has a high order 1 bit, then there was a carry out.
+        klee_assert((starting_cpu.regBank.registers[2] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[C] ? 1 : 0));
+        // If the ending X value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[N] ? 1 : 0));
+        // If X is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));
+        // Overflow occurs when signs of and output differ.
+        klee_assert(((cpu->regBank.registers[2] >= 0x80) != (starting_cpu.regBank.registers[2] >= 0x80)) == (cpu->PSNVCbits[V] ? 1 : 0));
         break;
+    case i_asra:
+        // The result is the starting register pair, shifted right by one.
+        // Additionally, the input is sign extended, which is represented by the | in the rhs.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 0, 1) >> 1) | (cpu_get_pair(&starting_cpu, 0, 1) >= 0x8000?0x8000:0)) 
+        == cpu_get_pair(cpu, 0 , 1));
+        // If the ending A value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[0] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // Carry out if starting lowest order bit is 1.
+        klee_assert((starting_cpu.regBank.registers[1] & 0x1 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // If A is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 0, 1) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));
+        break;
+    case i_asrx:
+        // The result is the starting register pair, shifted right by one.
+        // Additionally, the input is sign extended, which is represented by the | in the rhs.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 2, 3) >> 1) | (cpu_get_pair(&starting_cpu, 2, 3) >= 0x8000?0x8000:0)) 
+        == cpu_get_pair(cpu, 2 , 3));
+        // If the ending X value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // Carry out if starting lowest order bit is 1.
+        klee_assert((starting_cpu.regBank.registers[3] & 0x1 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // If X is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));
+        break;
+
     default:
         break;
     }
@@ -433,7 +468,7 @@ FLAG m_asra1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_asr(cpu, 0, 0, 1, 0, 1, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
@@ -441,6 +476,8 @@ FLAG m_asra2(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_ror(cpu, 1, 1, S, 0, 1, 1, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
@@ -451,7 +488,7 @@ FLAG m_asrx1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_asr(cpu, 2, 2, 1, 0, 1, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
@@ -459,6 +496,8 @@ FLAG m_asrx2(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_ror(cpu, 3, 3, S, 0, 1, 1, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
