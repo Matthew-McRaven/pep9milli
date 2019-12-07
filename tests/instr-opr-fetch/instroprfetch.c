@@ -364,7 +364,6 @@ FLAG odd_opr(struct VerificationModel* model)
     klee_assert(memory->memory[address] == cpu->regBank.registers[9]);
     klee_assert(address == (WORD)(starting_PC + 1));
     klee_assert(cpu->regBank.registers[9] == memory->memory[(WORD)(starting_PC + 1)]);
-    cpu->microPC = 16;
 
     return cpu_update_UPC(cpu, Unconditional, 16, 16);
 }
