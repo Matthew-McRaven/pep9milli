@@ -101,9 +101,9 @@ struct ALUByteResult byte_rol(BYTE a, FLAG carryIn)
     result.NZVC[N] = result.result & 0x80 ? 1 : 0;
     result.NZVC[Z] = result.result == 0 ? 1 : 0; 
      // Signed overflow if a<hi> doesn't match a<hi-1>
-    result.NZVC[V] =  (((a << 1) ^ a) >>7) ? 1 : 0;
+    result.NZVC[V] =  ((result.result >= 0x80) == (a >=0x80)) ? 0 : 1;
      // Carry out equals the hi order bit
-    result.NZVC[C] = ((a & 0x80) >> 7) ? 1 : 0;
+    result.NZVC[C] = (a >= 0x80) ? 1 : 0;
     return result;
 
 }

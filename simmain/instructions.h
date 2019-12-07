@@ -1,3 +1,4 @@
+// Map instruction base value to names.
 enum Instructions {
     i_stop = 0,
     i_ret = 1,
@@ -60,6 +61,7 @@ enum Instructions {
     i_stbx = 248
 };
 
+// Decoder table for instructions in the Pep/9 instruction set.
 enum Instructions instruction_array[256] =
 {
     i_stop,    i_ret,     i_rettr,   i_movspa,  i_movflga, i_movaflg, i_nota,    i_notx,      // 7

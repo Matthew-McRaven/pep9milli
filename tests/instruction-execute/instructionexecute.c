@@ -40,6 +40,35 @@ FLAG m_nega(struct VerificationModel* model);
 // NEGX instruction implementation
 FLAG m_negx(struct VerificationModel* model);
 
+// Unary no operation
+FLAG m_nop0(struct VerificationModel* model);
+
+// Unary Shift & Rotate Instructions
+// ASLA instruction
+FLAG m_asla1(struct VerificationModel* model);
+FLAG m_asla2(struct VerificationModel* model);
+// ASLX instruction
+FLAG m_aslx1(struct VerificationModel* model);
+FLAG m_aslx2(struct VerificationModel* model);
+// ASRA instruction
+FLAG m_asra1(struct VerificationModel* model);
+FLAG m_asra2(struct VerificationModel* model);
+// ASRX instruction
+FLAG m_asrx1(struct VerificationModel* model);
+FLAG m_asrx2(struct VerificationModel* model);
+
+// ROLA instruction
+FLAG m_rola1(struct VerificationModel* model);
+FLAG m_rola2(struct VerificationModel* model);
+// ROLX instruction
+FLAG m_rolx1(struct VerificationModel* model);
+FLAG m_rolx2(struct VerificationModel* model);
+// RORA instruction
+FLAG m_rora1(struct VerificationModel* model);
+FLAG m_rora2(struct VerificationModel* model);
+// RORX instruction
+FLAG m_rorx1(struct VerificationModel* model);
+FLAG m_rorx2(struct VerificationModel* model);
 
 static MicrocodeLine microcodeTable[] = 
 {
@@ -53,6 +82,23 @@ static MicrocodeLine microcodeTable[] =
     m_notx,                     //07
     m_nega,                     //08
     m_negx,                     //09
+    m_nop0,                     //10
+    m_asla1,                    //11
+    m_asla2,                    //12
+    m_aslx1,                    //13
+    m_aslx2,                    //14
+    m_asra1,                    //15
+    m_asra2,                    //16
+    m_asrx1,                    //17
+    m_asrx2,                    //18
+    m_rola1,                    //19
+    m_rola2,                    //20
+    m_rolx1,                    //21
+    m_rolx2,                    //22
+    m_rora1,                    //23
+    m_rora2,                    //24
+    m_rorx1,                    //25
+    m_rorx2,                    //26
 
 };
 
@@ -96,7 +142,9 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_notx){cpu->instruction_execute_decoder[it] = 7;}
         else if(instruction_array[it] == i_nega){cpu->instruction_execute_decoder[it] = 8;}
         else if(instruction_array[it] == i_negx){cpu->instruction_execute_decoder[it] = 9;}
-        else if(instruction_array[it] == 256){cpu->instruction_execute_decoder[it] = 2;}
+        else if(instruction_array[it] == i_nop0){cpu->instruction_execute_decoder[it] = 10;}
+        else if(instruction_array[it] == i_asla){cpu->instruction_execute_decoder[it] = 11;}
+        else if(instruction_array[it] == i_aslx){cpu->instruction_execute_decoder[it] = 13;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -186,6 +234,23 @@ FLAG test_model(struct VerificationModel *model)
         klee_assert((cpu->regBank.registers[2]>=0x80) == cpu->PSNVCbits[N]);
         // Signed overflow may only occur when the word is 0x8000.
         klee_assert((cpu_get_pair(cpu, 2, 3) == 0x8000) == cpu->PSNVCbits[V]);
+        break;
+    case i_nop0:
+        for(int it = 0; it<= 31; it++) { klee_assert(cpu->regBank.registers[it] == starting_cpu.regBank.registers[it]);}
+        break;
+    case i_asla:
+        klee_assert((WORD)(cpu_get_pair(&starting_cpu, 0, 1) << 1) == cpu_get_pair(cpu, 0, 1));
+        // If the starting A value has a high order 1 bit, then there was a carry out.
+        klee_assert((starting_cpu.regBank.registers[0] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[C] ? 1 : 0));
+        // If the ending A value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[0] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[N] ? 1 : 0));
+        // If A is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 0, 1) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));
+        // Overflow occurs when signs of and output differ.
+        klee_assert(((cpu->regBank.registers[0] >= 0x80) != (starting_cpu.regBank.registers[0] >= 0x80)) == (cpu->PSNVCbits[V] ? 1 : 0));
+        break;
+    case i_aslx:
+        klee_assert((WORD)(cpu_get_pair(&starting_cpu, 2, 3) << 1) == cpu_get_pair(cpu, 2, 3));
         break;
     default:
         break;
@@ -310,4 +375,161 @@ FLAG m_negx(struct VerificationModel* model)
     cpu_byte_sub_carry(cpu, 22, 2, 2, S, 1, 1, 1, 1, 0, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1);
+}
+
+// Unary no operation
+FLAG m_nop0(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// Unary Shift & Rotate Instructions
+// ASLA instruction
+FLAG m_asla1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_asl(cpu, 1, 1, 0, 0, 1, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_asla2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_rol(cpu, 0, 0, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// ASLX instruction
+FLAG m_aslx1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+   cpu_byte_asl(cpu, 3, 3, 0, 0, 1, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_aslx2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_rol(cpu, 2, 2, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// ASRA instruction
+FLAG m_asra1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_asra2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// ASRX instruction
+FLAG m_asrx1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_asrx2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// ROLA instruction
+FLAG m_rola1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_rola2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// ROLX instruction
+FLAG m_rolx1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_rolx2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// RORA instruction
+FLAG m_rora1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_rora2(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// RORX instruction
+FLAG m_rorx1(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // TODO
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
+}
+FLAG m_rorx2(struct VerificationModel* model){
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
