@@ -149,6 +149,8 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_asrx){cpu->instruction_execute_decoder[it] = 17;}
         else if(instruction_array[it] == i_rola){cpu->instruction_execute_decoder[it] = 19;}
         else if(instruction_array[it] == i_rolx){cpu->instruction_execute_decoder[it] = 21;}
+        else if(instruction_array[it] == i_rora){cpu->instruction_execute_decoder[it] = 23;}
+        else if(instruction_array[it] == i_rorx){cpu->instruction_execute_decoder[it] = 25;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -304,6 +306,22 @@ FLAG test_model(struct VerificationModel *model)
         == cpu_get_pair(cpu, 2 , 3));
         // If the starting X value has a high order 1 bit, then there was a carry out.
         klee_assert((starting_cpu.regBank.registers[2] >= 0x80 ? 1 : 0)==(cpu->PSNVCbits[C] ? 1 : 0));
+        break;
+    case i_rora:
+        // The result is the starting register pair, shifted right by one.
+        // Additionally, the input "shifts in" the carry.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 0, 1) >> 1) | (starting_cpu.PSNVCbits[C]?0x8000:0)) 
+        == cpu_get_pair(cpu, 0 , 1));
+        // Carry out if starting lowest order bit is 1.
+        klee_assert((starting_cpu.regBank.registers[1] & 0x1 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        break;
+    case i_rorx:
+        // The result is the starting register pair, shifted right by one.
+        // Additionally, the input "shifts in" the carry.
+        klee_assert((WORD)((cpu_get_pair(&starting_cpu, 2, 3) >> 1) | (starting_cpu.PSNVCbits[C]?0x8000:0)) 
+        == cpu_get_pair(cpu, 2 , 3));
+        // Carry out if starting lowest order bit is 1.
+        klee_assert((starting_cpu.regBank.registers[3] & 0x1 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
         break;
     default:
         break;
@@ -566,14 +584,17 @@ FLAG m_rora1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_ror(cpu, 0, 0, C, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
+
 FLAG m_rora2(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_ror(cpu, 1, 1, S, 0, 0, 0, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
@@ -584,13 +605,15 @@ FLAG m_rorx1(struct VerificationModel* model)
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
 
-    // TODO
+    cpu_byte_ror(cpu, 2, 2, C, 0, 0, 0, 0, 0, 1);
 
     return cpu_update_UPC(cpu, AUTO_INCR, 1, 1); 
 }
 FLAG m_rorx2(struct VerificationModel* model){
     // Cache pointer to cpu to save repeated pointer lookups.
     struct CPU* cpu = model->cpu;
+
+    cpu_byte_ror(cpu, 3, 3, S, 0, 0, 0, 0, 1, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
