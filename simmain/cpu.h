@@ -40,6 +40,7 @@ struct CPU
     // Indirect branching table units
     FLAG is_unary_decoder[256];
     MCAddress addressing_mode_decoder[256];
+    MCAddress instruction_execute_decoder[256];
 };
 
 // Initialize all values in a CPU to zero

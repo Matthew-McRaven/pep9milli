@@ -111,12 +111,10 @@ FLAG cpu_update_UPC(struct CPU *cpu, enum BRANCH_TYPE type, MCAddress trueTarget
 
             break;
         case AddressingModeDecoder:
-            
             cpu->microPC = cpu->addressing_mode_decoder[cpu->regBank.registers[8]];
             break;
-
         case InstructionSpecifierDecoder:
-            assert(0 && "Addressing mode undefined");
+            cpu->microPC = cpu->instruction_execute_decoder[cpu->regBank.registers[8]];
             break;
         case Stop:
             return 1;
@@ -185,7 +183,34 @@ FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS)
         cpu->PSNVCbits[S] = result->NZVC[C] ? 1 : 0;
     }
 }
+WORD cpu_get_pair(struct CPU* cpu, REGNUM hi, REGNUM lo)
+{
+        // A bus value may only be from register bank, MDRE, MDRO;
+    assert((hi>=0 && hi<=31) || hi==MDRO || hi==MDRE);
+    assert((lo>=0 && lo<=31) || lo==MDRO || lo==MDRE);
+    BYTE hi_value, lo_value;
+    if(hi >= 0 && hi <= 31) {
+        hi_value = cpu->regBank.registers[hi];
+    }
+    else if(hi == MDRE) {
+        hi_value = cpu->MDRE;
+    }
+    else if(hi == MDRO) {
+        hi_value = cpu->MDRO;
+    }
 
+    if(lo >= 0 && lo <= 31) {
+        lo_value = cpu->regBank.registers[lo];
+    }
+    else if(lo == MDRE) {
+        lo_value = cpu->MDRE;
+    }
+    else if(lo == MDRO) {
+        lo_value = cpu->MDRO;
+    }
+
+    return (WORD)(((WORD)hi_value )<< 8) | lo_value;
+}
 void cpu_byte_add_nocarry(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 
 FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     // A bus value may only be from register bank, MDRE, MDRO;

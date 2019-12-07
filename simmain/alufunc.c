@@ -15,13 +15,13 @@ struct ALUByteResult byte_add_nocarry(BYTE a, BYTE b)
 }
 struct ALUByteResult byte_sub_nocarry(BYTE a, BYTE b)
 {
-    return byte_sub_carry(a, b, 1);
+    return byte_add_carry(a, ~b, 1);
 }
 
 struct ALUByteResult byte_add_carry(BYTE a, BYTE b, FLAG carryIn)
 {
     struct ALUByteResult result;
-    result.result = a + b + (carryIn >= 1 ? 1 : 0);
+    result.result = (BYTE)(((BYTE)(a) + (BYTE)b) + (BYTE)(carryIn >= 1 ? 1 : 0));
     result.NZVC[N] = result.result & 0x80 ? 1 : 0;
     result.NZVC[Z] = result.result == 0 ? 1 : 0;
     // There is a signed overflow iff the high order bits of the input are the same,

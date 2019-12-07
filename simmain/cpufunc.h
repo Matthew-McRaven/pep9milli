@@ -28,6 +28,7 @@ void cpu_move_to_mar(struct CPU *cpu, REGNUM arn, REGNUM brn);
 void cpu_store_c(struct CPU* cpu, struct ALUByteResult* result, REGNUM crn);
 void cpu_save_status_bits(struct CPU* cpu, struct ALUByteResult* result, FLAG storeN, FLAG andZ,
 FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
+WORD cpu_get_pair(struct CPU* cpu, REGNUM hi, REGNUM lo);
 
 // Binary arithmatic operations.
 void cpu_byte_add_nocarry(struct CPU* cpu, REGNUM arn, REGNUM brn, REGNUM crn, 

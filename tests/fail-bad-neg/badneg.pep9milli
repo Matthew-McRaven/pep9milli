@@ -1,0 +1,11 @@
+            DecodeInstruction()
+end:        goto i_stop
+// Unclassified Unary Instructions
+i_stop:     STOP()
+
+//FAULT INJECTED: No carryout from low order bit
+i_nega:     RB1 := SUB  (RB22, RB1, RB1); Z
+            RB0 := SUB_C(RB22, RB0, RB0, S); ANVZ; goto end
+//FAULT INJECTED: Did not send Andz flag in second segment.
+i_negx:     RB3 := SUB  (RB22, RB3, RB3); SZ
+            RB2 := SUB_C(RB22, RB2, RB2, S); NVZ; goto end
