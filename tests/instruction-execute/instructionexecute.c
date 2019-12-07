@@ -84,6 +84,11 @@ FLAG m_brgt(struct VerificationModel* model);
 FLAG m_brv(struct VerificationModel* model);
 FLAG m_brc(struct VerificationModel* model);
 
+// Non-Unary Arithmetic Instruction
+FLAG m_addsp(struct VerificationModel* model);
+FLAG m_subsp(struct VerificationModel* model);
+FLAG m_adda(struct VerificationModel* model);
+FLAG m_addx(struct VerificationModel* model);
 static MicrocodeLine microcodeTable[] = 
 {
     determine_instruction,      //00
@@ -123,6 +128,10 @@ static MicrocodeLine microcodeTable[] =
     m_brgt,                     //34
     m_brv,                      //35
     m_brc,                      //36
+    m_addsp,                    //37
+    m_subsp,                    //38
+    m_adda,                     //49
+    m_addx,                     //30
 
 };
 
@@ -184,6 +193,10 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_brgt){cpu->instruction_execute_decoder[it] = 34;}
         else if(instruction_array[it] == i_brv){cpu->instruction_execute_decoder[it] = 35;}
         else if(instruction_array[it] == i_brc){cpu->instruction_execute_decoder[it] = 36;}
+        else if(instruction_array[it] == i_addsp){cpu->instruction_execute_decoder[it] = 37;}
+        else if(instruction_array[it] == i_subsp){cpu->instruction_execute_decoder[it] = 38;}
+        else if(instruction_array[it] == i_adda){cpu->instruction_execute_decoder[it] = 39;}
+        else if(instruction_array[it] == i_addx){cpu->instruction_execute_decoder[it] = 40;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -391,6 +404,49 @@ FLAG test_model(struct VerificationModel *model)
     case i_brc:
         if(cpu->PSNVCbits[C]) klee_assert((cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 20, 21)) && cpu->PSNVCbits[P] == 0);
         else klee_assert(cpu_get_pair(cpu, 6, 7) == cpu_get_pair(&starting_cpu, 6, 7));
+        break;
+    case i_addsp:
+        klee_assert(cpu_get_pair(cpu, 4, 5) == (WORD)(cpu_get_pair(&starting_cpu, 4, 5) + cpu_get_pair(&starting_cpu, 20, 21)));
+        break;
+    case i_subsp:
+        klee_assert(cpu_get_pair(cpu, 4, 5) == (WORD)(cpu_get_pair(&starting_cpu, 4, 5) + (WORD)(~cpu_get_pair(&starting_cpu, 20, 21)) + 1));
+        break;
+    case i_adda:
+        klee_assert(cpu_get_pair(cpu, 0, 1) == (WORD)(cpu_get_pair(&starting_cpu, 0, 1) + cpu_get_pair(&starting_cpu, 20, 21)));
+        // If the ending A value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[0] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If A is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 0, 1) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
+        // If A needs extra bits to be represented, then there was carry out.
+        klee_assert((((uint32_t)cpu_get_pair(&starting_cpu, 0, 1) + (uint32_t)cpu_get_pair(&starting_cpu, 20, 21))>=0x10000 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // Check if high order bytes are different, which checks for signed overflow.
+        if((starting_cpu.regBank.registers[20] ^ starting_cpu.regBank.registers[0]) & 0x80) {
+            // If high order differs, then V bit must be 0.
+            klee_assert(cpu->PSNVCbits[V] == 0); 
+        }
+        else {
+            // Otherwise the V bit is eq to the XOR of the high order bits.
+            klee_assert(((starting_cpu.regBank.registers[20] ^ cpu->regBank.registers[0]) & 0x80) ? 1 : 0 == (cpu->PSNVCbits[V] ? 1 : 0));
+        }
+        break;
+    case i_addx:
+        klee_assert(cpu_get_pair(cpu, 2, 3) == (WORD)(cpu_get_pair(&starting_cpu, 2, 3) + cpu_get_pair(&starting_cpu, 20, 21))); 
+        // If the ending X value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If X is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));   
+        // If X needs extra bits to be represented, then there was carry out.
+        klee_assert((((uint32_t)cpu_get_pair(&starting_cpu, 2, 3) + (uint32_t)cpu_get_pair(&starting_cpu, 20, 21))>=0x10000 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // Check if high order bytes are different, which checks for signed overflow.
+        if((starting_cpu.regBank.registers[20] ^ starting_cpu.regBank.registers[2]) & 0x80) {
+            // If high order differs, then V bit must be 0.
+            klee_assert(cpu->PSNVCbits[V] == 0); 
+        }
+        else {
+            // Otherwise the V bit is eq to the XOR of the high order bits.
+            klee_assert(((starting_cpu.regBank.registers[20] ^ cpu->regBank.registers[2]) & 0x80) ? 1 : 0 == (cpu->PSNVCbits[V] ? 1 : 0));
+        } 
+        break;
         break;
     default:
         break;
@@ -772,4 +828,51 @@ FLAG m_brc(struct VerificationModel* model)
     struct CPU* cpu = model->cpu;
 
     return cpu_update_UPC(cpu, BRC, 27, 1); 
+}
+
+// Non-Unary Arithmetic Instruction
+FLAG m_addsp(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_add_nocarry(cpu, 5, 21, 5, 0, 0, 0, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 4, 20, 4, S, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+FLAG m_subsp(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_sub_nocarry(cpu, 5, 21, 5, 0, 0, 0, 0, 0, 1);
+
+    cpu_byte_sub_carry(cpu, 4, 20, 4, S, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+FLAG m_adda(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_add_nocarry(cpu, 1, 21, 1, 0, 0, 1, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 0, 20, 0, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+FLAG m_addx(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_add_nocarry(cpu, 3, 21, 3, 0, 0, 1, 0, 0, 1);
+    cpu_byte_add_carry(cpu, 2, 20, 2, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
 }

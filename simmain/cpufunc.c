@@ -299,6 +299,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS) {
     BYTE brv = cpu->regBank.registers[brn];
 
     struct ALUByteResult result = byte_sub_nocarry(arv, brv);
+
     cpu_store_c(cpu, &result, crn);
     cpu_save_status_bits(cpu, &result, storeN, andZ, storeZ, storeV, storeC, storeS);
 
