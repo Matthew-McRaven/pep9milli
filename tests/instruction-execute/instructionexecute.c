@@ -98,6 +98,43 @@ FLAG m_andx(struct VerificationModel* model);
 FLAG m_ora(struct VerificationModel* model);
 FLAG m_orx(struct VerificationModel* model);
 
+// Two-byte Loads
+FLAG m_ldwa(struct VerificationModel* model);
+FLAG m_ldwx(struct VerificationModel* model);
+
+// One-byte Loads
+FLAG m_ldba(struct VerificationModel* model);
+FLAG m_ldba_mask(struct VerificationModel* model);
+FLAG m_ldba_det_i(struct VerificationModel* model);
+FLAG m_ldba_not_i(struct VerificationModel* model);
+FLAG m_ldba_i(struct VerificationModel* model);
+FLAG m_ldbx(struct VerificationModel* model);
+FLAG m_ldbx_mask(struct VerificationModel* model);
+FLAG m_ldbx_det_i(struct VerificationModel* model);
+FLAG m_ldbx_not_i(struct VerificationModel* model);
+FLAG m_ldbx_i(struct VerificationModel* model);
+FLAG m_ldbr_n_fix(struct VerificationModel* model);
+
+// Two-byte Stores
+
+// One-byte Stores
+
+// Compare Word
+
+// Compare Byte
+
+// Call
+
+// Return
+
+// Return from Trap
+
+// Trap entry points
+
+// The trap
+
+
+
 static MicrocodeLine microcodeTable[] = 
 {
     determine_instruction,      //00
@@ -147,6 +184,19 @@ static MicrocodeLine microcodeTable[] =
     m_andx,                     //44
     m_ora,                      //45
     m_orx,                      //46
+    m_ldwa,                     //47
+    m_ldwx,                     //48
+    m_ldba,                     //49
+    m_ldba_mask,                //50
+    m_ldba_det_i,               //51
+    m_ldba_not_i,               //52
+    m_ldba_i,                   //53
+    m_ldbx,                     //54
+    m_ldbx_mask,                //55
+    m_ldbx_det_i,               //56
+    m_ldbx_not_i,               //57
+    m_ldbx_i,                   //58
+    m_ldbr_n_fix,               //59
 
 };
 
@@ -218,6 +268,10 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_andx){cpu->instruction_execute_decoder[it] = 44;}
         else if(instruction_array[it] == i_ora){cpu->instruction_execute_decoder[it] = 45;}
         else if(instruction_array[it] == i_orx){cpu->instruction_execute_decoder[it] = 46;}
+        else if(instruction_array[it] == i_ldwa){cpu->instruction_execute_decoder[it] = 47;}
+        else if(instruction_array[it] == i_ldwx){cpu->instruction_execute_decoder[it] = 48;}
+        else if(instruction_array[it] == i_ldba){cpu->instruction_execute_decoder[it] = 49;}
+        else if(instruction_array[it] == i_ldbx){cpu->instruction_execute_decoder[it] = 54;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -525,6 +579,54 @@ FLAG test_model(struct VerificationModel *model)
         klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
         // If X is 0, then Z should be 1, else 0.
         klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
+        break;
+    case i_ldwa:
+        // Assert that A has been loaded from T6.
+        klee_assert(cpu_get_pair(cpu, 0, 1) == cpu_get_pair(&starting_cpu, 20, 21));
+        // If the ending A value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[0] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If A is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 0, 1) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
+
+        break;
+    case i_ldwx:
+        // Assert that X has been loaded T6.
+        klee_assert(cpu_get_pair(cpu, 2, 3) == cpu_get_pair(&starting_cpu, 20, 21));
+        // If the ending X value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If X is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
+        break;
+    case i_ldba:
+        
+        if(instr_addr_mode[cpu->regBank.registers[8]] == i_addr) {
+            klee_assert(cpu->regBank.registers[1] == starting_cpu.regBank.registers[21]);
+        }
+        else {
+            klee_assert(cpu->regBank.registers[1] == starting_cpu.regBank.registers[20]);
+        }
+        
+        // Assert that starting A<hi> is ending A<hi>
+        klee_assert(cpu->regBank.registers[0] == starting_cpu.regBank.registers[0]);
+        // Should never be negative.
+        klee_assert(cpu->PSNVCbits[N] == 0);
+        // If A<lo> is 0, then Z should be 1, else 0.
+        klee_assert((cpu->regBank.registers[1] == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
+
+        break;
+    case i_ldbx:
+        if(instr_addr_mode[cpu->regBank.registers[8]] == i_addr) {
+            klee_assert(cpu->regBank.registers[3] == starting_cpu.regBank.registers[21]);
+        }
+        else {
+            klee_assert(cpu->regBank.registers[3] == starting_cpu.regBank.registers[20]);
+        }
+        // Assert that starting X<hi> is ending X<hi>
+        klee_assert(cpu->regBank.registers[2] == starting_cpu.regBank.registers[2]);
+        // Should never be negative.
+        klee_assert(cpu->PSNVCbits[N] == 0);
+        // If X<lo> is 0, then Z should be 1, else 0.
+        klee_assert((cpu->regBank.registers[3] == 0) == (cpu->PSNVCbits[Z] ? 1 : 0)); 
         break;
     default:
         break;
@@ -984,10 +1086,9 @@ FLAG m_anda(struct VerificationModel* model)
     cpu_byte_and(cpu, 1, 21, 1, 0, 0, 1);
     cpu_byte_and(cpu, 0, 20, 0, 1, 1, 1);
 
-    klee_assert(cpu_get_pair(cpu, 0, 1) == (WORD)(cpu_get_pair(&starting_cpu, 0, 1) & cpu_get_pair(cpu, 20, 21)));
-
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
+
 FLAG m_andx(struct VerificationModel* model)
 {
     // Cache pointer to cpu to save repeated pointer lookups.
@@ -995,8 +1096,6 @@ FLAG m_andx(struct VerificationModel* model)
 
     cpu_byte_and(cpu, 3, 21, 3, 0, 0, 1);
     cpu_byte_and(cpu, 2, 20, 2, 1, 1, 1);
-
-    klee_assert(cpu_get_pair(cpu, 2, 3) == (WORD)(cpu_get_pair(&starting_cpu, 2, 3) & cpu_get_pair(cpu, 20, 21)));
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
@@ -1018,6 +1117,143 @@ FLAG m_orx(struct VerificationModel* model)
 
     cpu_byte_or(cpu, 3, 21, 3, 0, 0, 1);
     cpu_byte_or(cpu, 2, 20, 2, 1, 1, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+
+// Two-byte Loads
+FLAG m_ldwa(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, 21, 1, 0, 0, 1);
+    cpu_byte_ident(cpu, 20, 0, 1, 1, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1);   
+}
+FLAG m_ldwx(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, 21, 3, 0, 0, 1);
+    cpu_byte_ident(cpu, 20, 2, 1, 1, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1);   
+}
+
+// One-byte Loads
+FLAG m_ldba(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Subtract 8-1 to compute 7, which can be used to mask out address bits.
+    cpu_byte_sub_nocarry(cpu, 27, 23, 17, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 0, 0);      
+}
+
+FLAG m_ldba_mask(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    // Mask out the addressing mode bits of the instruction specifier.
+    cpu_byte_and(cpu, 8, 17, 17, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 0, 0);   
+}
+
+FLAG m_ldba_det_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    cpu_byte_add_nocarry(cpu, 17, 23, NONE, 0, 0, 0, 0, 0, S);
+
+    return cpu_update_UPC(cpu, BRS, 52,  53);   
+}
+
+FLAG m_ldba_not_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    cpu_byte_ident(cpu, 20, 1, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 59, 59);     
+}
+
+FLAG m_ldba_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, 21, 1, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 59, 59);   
+}
+
+FLAG m_ldbx(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    // Subtract 8-1 to compute 7, which can be used to mask out address bits.
+    cpu_byte_sub_nocarry(cpu, 27, 23, 17, 0, 0, 0, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 0, 0);      
+}
+
+FLAG m_ldbx_mask(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    // Mask out the addressing mode bits of the instruction specifier.
+    cpu_byte_and(cpu, 8, 17, 17, 0, 0, 0);
+
+    return cpu_update_UPC(cpu, AUTO_INCR, 0, 0);   
+}
+
+FLAG m_ldbx_det_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    cpu_byte_add_nocarry(cpu, 17, 23, NONE, 0, 0, 0, 0, 0, S);
+
+    return cpu_update_UPC(cpu, BRS, 57,  58);   
+}
+
+FLAG m_ldbx_not_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+    
+    cpu_byte_ident(cpu, 20, 3, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 59, 59);     
+}
+
+FLAG m_ldbx_i(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_ident(cpu, 21, 3, 0, 0, 1);
+
+    return cpu_update_UPC(cpu, Unconditional, 59, 59);   
+}
+
+FLAG m_ldbr_n_fix(struct VerificationModel* model)
+{
+    struct CPU* cpu = model->cpu;
+
+    // Force the N bit to be 0.
+    cpu_byte_ident(cpu, 23, NONE, 1, 0, 0);
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
