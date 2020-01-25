@@ -89,6 +89,9 @@ FLAG m_addsp(struct VerificationModel* model);
 FLAG m_subsp(struct VerificationModel* model);
 FLAG m_adda(struct VerificationModel* model);
 FLAG m_addx(struct VerificationModel* model);
+FLAG m_suba(struct VerificationModel* model);
+FLAG m_subx(struct VerificationModel* model);
+
 static MicrocodeLine microcodeTable[] = 
 {
     determine_instruction,      //00
@@ -132,6 +135,8 @@ static MicrocodeLine microcodeTable[] =
     m_subsp,                    //38
     m_adda,                     //49
     m_addx,                     //30
+    m_suba,                     //41
+    m_subx,                     //42
 
 };
 
@@ -197,6 +202,8 @@ void init_model(struct VerificationModel *model)
         else if(instruction_array[it] == i_subsp){cpu->instruction_execute_decoder[it] = 38;}
         else if(instruction_array[it] == i_adda){cpu->instruction_execute_decoder[it] = 39;}
         else if(instruction_array[it] == i_addx){cpu->instruction_execute_decoder[it] = 40;}
+        else if(instruction_array[it] == i_suba){cpu->instruction_execute_decoder[it] = 41;}
+        else if(instruction_array[it] == i_subx){cpu->instruction_execute_decoder[it] = 42;}
         else {cpu->instruction_execute_decoder[it] = 2;}
         
     }
@@ -447,6 +454,31 @@ FLAG test_model(struct VerificationModel *model)
             klee_assert(((starting_cpu.regBank.registers[20] ^ cpu->regBank.registers[2]) & 0x80) ? 1 : 0 == (cpu->PSNVCbits[V] ? 1 : 0));
         } 
         break;
+    case i_suba:
+        // Assert that A is equal to original A, plus the 2's complement of the operand value.
+        klee_assert(cpu_get_pair(cpu, 0, 1) == (WORD)(cpu_get_pair(&starting_cpu, 0, 1) + (WORD)(~cpu_get_pair(&starting_cpu, 20, 21)) + 1));
+        // If the ending A value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[0] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If A is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 0, 1) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));  
+        // If A needs extra bits to be represented, then there was carry out.
+        klee_assert((((uint32_t)cpu_get_pair(&starting_cpu, 0, 1) + (uint32_t)((WORD)(((WORD)~cpu_get_pair(&starting_cpu, 20, 21)))+1))>=0x10000 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // Check if high order bytes are different, which checks for signed overflow.
+        // TODO: Signed Overflow.
+
+        break;
+    case i_subx:
+        // Assert that X is equal to original X, plus the 2's complement of the operand value.
+        klee_assert(cpu_get_pair(cpu, 2, 3) == (WORD)(cpu_get_pair(&starting_cpu, 2, 3) + (WORD)(~cpu_get_pair(&starting_cpu, 20, 21)) + 1)); 
+        // If the ending X value has a high order 1 bit, then it should be negative.
+        klee_assert((cpu->regBank.registers[2] >= 0x80 ? 1 : 0) == (cpu->PSNVCbits[N] ? 1 : 0));
+        // If X is 0, then Z should be 1, else 0.
+        klee_assert((cpu_get_pair(cpu, 2, 3) == 0) == (cpu->PSNVCbits[Z] ? 1 : 0));  
+        // If X needs extra bits to be represented, then there was carry out.
+        klee_assert((((uint32_t)cpu_get_pair(&starting_cpu, 2, 3) + (uint32_t)((WORD)(((WORD)~cpu_get_pair(&starting_cpu, 20, 21)))+1))>=0x10000 ? 1 : 0) == (cpu->PSNVCbits[C] ? 1 : 0));
+        // Check if high order bytes are different, which checks for signed overflow.
+        // TODO: Signed Overflow.
+
         break;
     default:
         break;
@@ -875,4 +907,24 @@ FLAG m_addx(struct VerificationModel* model)
 
     return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
+
+FLAG m_suba(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_sub_nocarry(cpu, 1, 21, 1, 0, 0, 1, 0, 0, 1);
+    cpu_byte_sub_carry(cpu, 0, 20, 0, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
+}
+FLAG m_subx(struct VerificationModel* model)
+{
+    // Cache pointer to cpu to save repeated pointer lookups.
+    struct CPU* cpu = model->cpu;
+
+    cpu_byte_sub_nocarry(cpu, 3, 21, 3, 0, 0, 1, 0, 0, 1);
+    cpu_byte_sub_carry(cpu, 2, 20, 2, S, 1, 1, 1, 1, 1, 0);
+
+    return cpu_update_UPC(cpu, Unconditional, 1, 1); 
 }
