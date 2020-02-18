@@ -2,6 +2,10 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "cpu.h"
 #include "cpufunc.h"
 #include "defs.h"
@@ -23,5 +27,9 @@ void mem_dbg_write_mdro(struct CPU* cpu, struct MainMemory* main_memory);
 // Memory read / write operations
 void mem_read_word(struct CPU* cpu, struct MainMemory* main_memory, FLAG intoMDRE, FLAG intoMDRO);
 //void mem_write_word(struct CPU* cpu, struct MainMemory* main_memory);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

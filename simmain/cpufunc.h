@@ -4,6 +4,9 @@
 #include "cpu.h"
 #include "alufunc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 enum BRANCH_TYPE
 {
     Unconditional = 0,
@@ -72,5 +75,7 @@ FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
 void cpu_set_flags(struct CPU* cpu, REGNUM arn,
 FLAG storeN, FLAG andZ, FLAG storeZ, FLAG storeV, FLAG storeC, FLAG storeS);
 void cpu_read_flags(struct CPU* cpu, REGNUM crn);
-
+#ifdef __cplusplus
+}
+#endif
 #endif //CPUFUNC_H

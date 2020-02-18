@@ -1,6 +1,9 @@
 #ifndef CPU_H
 #define CPU_H
 #include "defs.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 enum Registers
 {
     A = 0, X = 2, SP = 4, PC = 6, 
@@ -80,5 +83,8 @@ void setMDR(struct CPU* cpu, enum Registers which, BYTE value);
 
 // Write status bits
 void setFlag(struct CPU* cpu, enum StatusBits flag, FLAG value);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -2,6 +2,10 @@
 #define DEFS_H
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Define the size of a memory address in Pep/9
 typedef uint8_t ADDRESS;
 // Define twice the size of a word in Pep/9
@@ -13,5 +17,9 @@ typedef uint8_t FLAG;
 // Define a type to represent a register number
 typedef  int8_t REGNUM;
 typedef uint16_t MCAddress;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

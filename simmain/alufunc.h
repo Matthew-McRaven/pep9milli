@@ -1,8 +1,11 @@
 #ifndef ALUFUNC_H
 #define ALUFUNC_H
 
-#include "defs.h"
 
+#include "defs.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct ALUByteResult
 {
@@ -64,5 +67,7 @@ struct ALUWordResult word_asr(WORD a);
 struct ALUWordResult word_rol(WORD a, FLAG carryIn);
 struct ALUWordResult word_ror(WORD a, FLAG carryIn);
 struct ALUWordResult word_ident(WORD a);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

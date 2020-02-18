@@ -1,6 +1,10 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "cpu.h"
 #include "defs.h"
 #include "memory.h"
@@ -24,5 +28,9 @@ enum AddressingModes
 
 // Which addressing mode is associated with a particular instruction specifier
 enum AddressingModes instr_addr_mode[256];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

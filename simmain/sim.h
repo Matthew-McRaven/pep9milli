@@ -1,6 +1,10 @@
 #ifndef SIM_H
 #define SIM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <assert.h>
 
 #include "cpu.h"
@@ -21,5 +25,9 @@ FLAG test_model(struct VerificationModel *model);
 // Using a per-simulation method to generate this value
 // avoids out-of-bounds memory access encountered in earlier versions.
 MicrocodeLine fetch_current_line(struct CPU *cpu);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

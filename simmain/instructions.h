@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 // Map instruction base value to names.
 enum Instructions {
     i_stop = 0,
@@ -97,3 +100,6 @@ enum Instructions instruction_array[256] =
     i_stba,    i_stba,    i_stba,    i_stba,    i_stba,    i_stba,    i_stba,    i_stba,      // 247
     i_stbx,    i_stbx,    i_stbx,    i_stbx,    i_stbx,    i_stbx,    i_stbx,    i_stbx       // 255
 };
+#ifdef __cplusplus
+}
+#endif
