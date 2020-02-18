@@ -43,6 +43,8 @@ struct ALUByteResult byte_and(BYTE a, BYTE b)
     result.result = a & b;
     result.NZVC[N] = (result.result & 0x80) ? 1 : 0;
     result.NZVC[Z] = (result.result == 0) ? 1 : 0;
+    result.NZVC[V] = 0;
+    result.NZVC[C] = 0;
     return result;
 }
 
@@ -79,6 +81,8 @@ struct ALUByteResult byte_not(BYTE a)
     result.result = ~a;
     result.NZVC[N] = (result.result & 0x80) ? 1 : 0;
     result.NZVC[Z] = (result.result == 0) ? 1 : 0;
+    result.NZVC[V] = 0;
+    result.NZVC[C] = 0;
     return result;
 }
 
@@ -112,7 +116,8 @@ struct ALUByteResult byte_ror(BYTE a, FLAG carryIn)
     struct ALUByteResult result;
     result.result = a >> 1 | (carryIn ? 0x80 : 0);
     result.NZVC[N] = (result.result & 0x80) ? 1 : 0;
-    result.NZVC[Z] = (result.result == 0) ? 1 : 0; 
+    result.NZVC[Z] = (result.result == 0) ? 1 : 0;
+    result.NZVC[V] = 0;
      // Carry out equals the lo order bit
     result.NZVC[C] = (a & 0x01) ? 1 : 0;
     return result;
@@ -123,12 +128,15 @@ struct ALUByteResult byte_ident(BYTE a)
     struct ALUByteResult result;
     result.result = a;
     result.NZVC[N] = (result.result & 0x80) ? 1 : 0;
-    result.NZVC[Z] = (result.result == 0) ? 1 : 0; 
+    result.NZVC[Z] = (result.result == 0) ? 1 : 0;
+    result.NZVC[V] = 0;
+    result.NZVC[C] = 0;
     return result;
 }
 struct ALUByteResult byte_flags(BYTE a)
 {
     struct ALUByteResult result;
+    result.result = 0;
     result.NZVC[N] = (a & (1<<3)) ? 1 : 0;
     result.NZVC[Z] = (a & (1<<2)) ? 1 : 0;
     result.NZVC[V] = (a & (1<<1)) ? 1 : 0;
